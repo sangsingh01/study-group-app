@@ -1,7 +1,45 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import 'home_screen.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final user = await _authService.signInWithGoogle();
+
+      if (user != null && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(user: user),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sign in failed. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+
+    setState(() => _isLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,14 +52,12 @@ class LoginScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-
               const Icon(
                 Icons.groups_rounded,
                 size: 80,
                 color: Color(0xFF6C63FF),
               ),
               const SizedBox(height: 16),
-
               const Text(
                 'Study Group',
                 style: TextStyle(
@@ -31,7 +67,6 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-
               const Text(
                 'Learn Together, Grow Together',
                 style: TextStyle(
@@ -40,7 +75,6 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 60),
-
               const Text(
                 'Welcome Back!',
                 style: TextStyle(
@@ -50,7 +84,6 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-
               const Text(
                 'Sign in to continue with your study groups',
                 textAlign: TextAlign.center,
@@ -63,9 +96,7 @@ class LoginScreen extends StatelessWidget {
 
               // Google Sign In Button
               GestureDetector(
-                onTap: () {
-                  // Google sign in will go here
-                },
+                onTap: _isLoading ? null : _handleGoogleSignIn,
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -81,30 +112,35 @@ class LoginScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.g_mobiledata_rounded,
-                        size: 32,
-                        color: Colors.red,
-                      ),
-                      SizedBox(width: 12),
-                      Text(
-                        'Continue with Google',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87,
+                  child: _isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF6C63FF),
+                          ),
+                        )
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.g_mobiledata_rounded,
+                              size: 32,
+                              color: Colors.red,
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Continue with Google',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
 
               const SizedBox(height: 24),
-
               const Text(
                 'By continuing, you agree to our\nTerms of Service and Privacy Policy',
                 textAlign: TextAlign.center,
