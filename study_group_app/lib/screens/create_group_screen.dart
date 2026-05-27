@@ -23,15 +23,18 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     if (_nameController.text.isEmpty ||
         _descriptionController.text.isEmpty ||
         _subjectController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
       return;
     }
 
     setState(() => _isLoading = true);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
     try {
+      final inviteCode = _generateInviteCode();
       final group = GroupModel(
         id: FirebaseFirestore.instance.collection('groups').doc().id,
         name: _nameController.text.trim(),
@@ -39,15 +42,18 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         subject: _subjectController.text.trim(),
         createdBy: widget.user.uid,
         createdByName: widget.user.displayName ?? 'Unknown',
+        adminUid: widget.user.uid,
+        inviteCode: inviteCode,
         members: [widget.user.uid],
+        memberRoles: {widget.user.uid: 'admin'},
         createdAt: DateTime.now(),
       );
 
       await _databaseService.createGroup(group);
 
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
+        navigator.pop();
+        messenger.showSnackBar(
           const SnackBar(
             content: Text('Group created successfully!'),
             backgroundColor: Colors.green,
@@ -55,7 +61,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Error creating group. Try again.'),
           backgroundColor: Colors.red,
@@ -66,18 +72,19 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     setState(() => _isLoading = false);
   }
 
+  String _generateInviteCode() {
+    const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    return List.generate(6, (index) {
+      final position =
+          (DateTime.now().millisecondsSinceEpoch + index) % alphabet.length;
+      return alphabet[position];
+    }).join();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF6C63FF),
-        title: const Text(
-          'Create Group',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
+      appBar: AppBar(title: const Text('Create Group')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -172,14 +179,19 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           maxLines: maxLines,
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: Icon(icon, color: const Color(0xFF6C63FF)),
+            prefixIcon: Icon(
+              icon,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF6C63FF)),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

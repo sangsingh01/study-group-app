@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/database_service.dart';
+import '../providers/profile_provider.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -11,25 +14,31 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
+  final DatabaseService _databaseService = DatabaseService();
   bool _isLoading = false;
 
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final profileProvider = Provider.of<ProfileProvider>(
+      context,
+      listen: false,
+    );
 
     try {
       final user = await _authService.signInWithGoogle();
 
       if (user != null && mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomeScreen(user: user),
-          ),
+        await _databaseService.createUserProfile(user);
+        await profileProvider.initialize(user);
+        navigator.pushReplacement(
+          MaterialPageRoute(builder: (context) => HomeScreen(user: user)),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Text('Sign in failed. Please try again.'),
             backgroundColor: Colors.red,
@@ -52,27 +61,24 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.groups_rounded,
                 size: 80,
-                color: Color(0xFF6C63FF),
+                color: Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Study Group',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF6C63FF),
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 8),
               const Text(
                 'Learn Together, Grow Together',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 60),
               const Text(
@@ -87,10 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const Text(
                 'Sign in to continue with your study groups',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 40),
 
@@ -103,19 +106,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
+                    border: Border.all(color: Theme.of(context).dividerColor),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.shade200,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.shadow.withAlpha(15),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: _isLoading
-                      ? const Center(
+                      ? Center(
                           child: CircularProgressIndicator(
-                            color: Color(0xFF6C63FF),
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         )
                       : const Row(
@@ -144,10 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const Text(
                 'By continuing, you agree to our\nTerms of Service and Privacy Policy',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ),

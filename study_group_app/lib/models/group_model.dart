@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class GroupModel {
   final String id;
   final String name;
@@ -5,7 +7,10 @@ class GroupModel {
   final String subject;
   final String createdBy;
   final String createdByName;
+  final String adminUid;
+  final String inviteCode;
   final List<String> members;
+  final Map<String, String> memberRoles;
   final DateTime createdAt;
 
   GroupModel({
@@ -15,11 +20,13 @@ class GroupModel {
     required this.subject,
     required this.createdBy,
     required this.createdByName,
+    required this.adminUid,
+    required this.inviteCode,
     required this.members,
+    required this.memberRoles,
     required this.createdAt,
   });
 
-  // Convert to Map for Firestore
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -28,12 +35,14 @@ class GroupModel {
       'subject': subject,
       'createdBy': createdBy,
       'createdByName': createdByName,
+      'adminUid': adminUid,
+      'inviteCode': inviteCode,
       'members': members,
+      'memberRoles': memberRoles,
       'createdAt': createdAt,
     };
   }
 
-  // Convert from Firestore Map
   factory GroupModel.fromMap(Map<String, dynamic> map) {
     return GroupModel(
       id: map['id'] ?? '',
@@ -42,8 +51,11 @@ class GroupModel {
       subject: map['subject'] ?? '',
       createdBy: map['createdBy'] ?? '',
       createdByName: map['createdByName'] ?? '',
+      adminUid: map['adminUid'] ?? '',
+      inviteCode: map['inviteCode'] ?? '',
       members: List<String>.from(map['members'] ?? []),
-      createdAt: map['createdAt'].toDate(),
+      memberRoles: Map<String, String>.from(map['memberRoles'] ?? {}),
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
     );
   }
 }

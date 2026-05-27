@@ -9,7 +9,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -34,11 +33,7 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.groups_rounded,
-              size: 100,
-              color: Colors.white,
-            ),
+            const Icon(Icons.groups_rounded, size: 100, color: Colors.white),
             const SizedBox(height: 20),
             const Text(
               'Study Group',
@@ -51,15 +46,10 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 10),
             const Text(
               'Learn Together, Grow Together',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.white70),
             ),
             const SizedBox(height: 40),
-            const CircularProgressIndicator(
-              color: Colors.white,
-            ),
+            const CircularProgressIndicator(color: Colors.white),
           ],
         ),
       ),
