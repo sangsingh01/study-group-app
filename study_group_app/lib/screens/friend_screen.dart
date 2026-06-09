@@ -25,6 +25,62 @@ class _FriendScreenState extends State<FriendScreen> {
     super.dispose();
   }
 
+  Future<void> _acceptRequest(AppUser requester) async {
+    try {
+      await _databaseService.acceptFriendRequest(
+        widget.user.uid,
+        requester.uid,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${requester.username} is now your friend.'),
+            backgroundColor: const Color(0xFF43E97B),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Unable to accept request from ${requester.username}.',
+            ),
+            backgroundColor: const Color(0xFFFF6584),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _declineRequest(AppUser requester) async {
+    try {
+      await _databaseService.declineFriendRequest(
+        widget.user.uid,
+        requester.uid,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Declined request from ${requester.username}.'),
+            backgroundColor: const Color(0xFF6B7280),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Unable to decline request from ${requester.username}.',
+            ),
+            backgroundColor: const Color(0xFFFF6584),
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildAvatar(AppUser member) {
     return Stack(
       clipBehavior: Clip.none,
@@ -113,20 +169,27 @@ class _FriendScreenState extends State<FriendScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => SearchUsersScreen(currentUid: widget.user.uid),
+                              builder: (_) => SearchUsersScreen(
+                                currentUid: widget.user.uid,
+                              ),
                             ),
                           );
                         },
                         icon: const Icon(Icons.person_add_alt_1_rounded),
                         label: Text(
                           'Add',
-                          style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         style: ElevatedButton.styleFrom(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                         ),
                       ),
                     ],
@@ -134,10 +197,14 @@ class _FriendScreenState extends State<FriendScreen> {
                   const SizedBox(height: 18),
                   TextField(
                     controller: _searchController,
-                    onChanged: (value) => setState(() => _searchQuery = value.trim()),
+                    onChanged: (value) =>
+                        setState(() => _searchQuery = value.trim()),
                     decoration: InputDecoration(
                       hintText: 'Search friends',
-                      prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF6C63FF)),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: Color(0xFF6C63FF),
+                      ),
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
@@ -187,11 +254,16 @@ class _FriendScreenState extends State<FriendScreen> {
                       ),
                     )
                   else
-                    FutureBuilder<List<AppUser>>(
-                      future: _databaseService.getUsersByIds(currentUser.friendRequests),
+                    StreamBuilder<List<AppUser>>(
+                      stream: _databaseService.usersByIdsStream(
+                        currentUser.friendRequests,
+                      ),
                       builder: (context, requestSnapshot) {
-                        if (requestSnapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                        if (requestSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
                         }
                         final requesters = requestSnapshot.data ?? [];
                         if (requesters.isEmpty) {
@@ -210,9 +282,14 @@ class _FriendScreenState extends State<FriendScreen> {
                                   children: [
                                     CircleAvatar(
                                       radius: 26,
-                                      backgroundColor: const Color(0xFF6C63FF).withAlpha(46),
-                                      foregroundImage: requester.profileImage != null
-                                          ? NetworkImage(requester.profileImage!)
+                                      backgroundColor: const Color(
+                                        0xFF6C63FF,
+                                      ).withAlpha(46),
+                                      foregroundImage:
+                                          requester.profileImage != null
+                                          ? NetworkImage(
+                                              requester.profileImage!,
+                                            )
                                           : null,
                                       child: requester.profileImage == null
                                           ? Text(
@@ -227,7 +304,8 @@ class _FriendScreenState extends State<FriendScreen> {
                                     const SizedBox(width: 14),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             requester.username,
@@ -250,21 +328,23 @@ class _FriendScreenState extends State<FriendScreen> {
                                     Row(
                                       children: [
                                         IconButton(
-                                          icon: const Icon(Icons.check_circle, color: Color(0xFF43E97B)),
-                                          onPressed: () => _databaseService.acceptFriendRequest(
-                                            widget.user.uid,
-                                            requester.uid,
+                                          icon: const Icon(
+                                            Icons.check_circle,
+                                            color: Color(0xFF43E97B),
                                           ),
+                                          onPressed: () =>
+                                              _acceptRequest(requester),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.cancel, color: Color(0xFFFF6584)),
-                                          onPressed: () => _databaseService.declineFriendRequest(
-                                            widget.user.uid,
-                                            requester.uid,
+                                          icon: const Icon(
+                                            Icons.cancel,
+                                            color: Color(0xFFFF6584),
                                           ),
+                                          onPressed: () =>
+                                              _declineRequest(requester),
                                         ),
                                       ],
-                                    )
+                                    ),
                                   ],
                                 ),
                               ),
@@ -283,18 +363,27 @@ class _FriendScreenState extends State<FriendScreen> {
                   ),
                   const SizedBox(height: 14),
                   Expanded(
-                    child: FutureBuilder<List<AppUser>>(
-                      future: _databaseService.getUsersByIds(currentUser.friends),
+                    child: StreamBuilder<List<AppUser>>(
+                      stream: _databaseService.usersByIdsStream(
+                        currentUser.friends,
+                      ),
                       builder: (context, friendSnapshot) {
-                        if (friendSnapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                        if (friendSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
                         }
                         final friends = friendSnapshot.data ?? [];
                         final filteredFriends = _searchQuery.isEmpty
                             ? friends
                             : friends.where((friend) {
-                                return friend.username.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                                    friend.email.toLowerCase().contains(_searchQuery.toLowerCase());
+                                return friend.username.toLowerCase().contains(
+                                      _searchQuery.toLowerCase(),
+                                    ) ||
+                                    friend.email.toLowerCase().contains(
+                                      _searchQuery.toLowerCase(),
+                                    );
                               }).toList();
                         if (filteredFriends.isEmpty) {
                           return Center(
@@ -308,7 +397,8 @@ class _FriendScreenState extends State<FriendScreen> {
                         }
                         return ListView.separated(
                           itemCount: filteredFriends.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 12),
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final friend = filteredFriends[index];
                             return Container(
@@ -338,10 +428,17 @@ class _FriendScreenState extends State<FriendScreen> {
                                   ),
                                 ),
                                 trailing: IconButton(
-                                  icon: const Icon(Icons.chat_bubble_rounded, color: Color(0xFF6C63FF)),
+                                  icon: const Icon(
+                                    Icons.chat_bubble_rounded,
+                                    color: Color(0xFF6C63FF),
+                                  ),
                                   onPressed: () {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Chat feature coming soon')),
+                                      const SnackBar(
+                                        content: Text(
+                                          'Chat feature coming soon',
+                                        ),
+                                      ),
                                     );
                                   },
                                 ),

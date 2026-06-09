@@ -10,22 +10,23 @@ class AppTheme {
     const surface = Colors.white;
     const onBackground = Color(0xFF1A1A2E);
 
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: primary,
-      secondary: secondary,
-      tertiary: accent,
-    ).copyWith(
-      surface: surface,
-      onSurface: onBackground,
-      primary: primary,
-      onPrimary: Colors.white,
-      secondary: secondary,
-      onSecondary: Colors.white,
-      tertiary: accent,
-      onTertiary: Colors.white,
-      error: const Color(0xFFEF476F),
-      onError: Colors.white,
-    );
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: primary,
+          secondary: secondary,
+          tertiary: accent,
+        ).copyWith(
+          surface: surface,
+          onSurface: onBackground,
+          primary: primary,
+          onPrimary: Colors.white,
+          secondary: secondary,
+          onSecondary: Colors.white,
+          tertiary: accent,
+          onTertiary: Colors.white,
+          error: const Color(0xFFEF476F),
+          onError: Colors.white,
+        );
 
     return ThemeData(
       useMaterial3: true,
@@ -33,10 +34,7 @@ class AppTheme {
       scaffoldBackgroundColor: background,
       textTheme: GoogleFonts.poppinsTextTheme(
         Typography.blackMountainView,
-      ).apply(
-        bodyColor: onBackground,
-        displayColor: onBackground,
-      ),
+      ).apply(bodyColor: onBackground, displayColor: onBackground),
       appBarTheme: AppBarTheme(
         backgroundColor: primary,
         foregroundColor: Colors.white,
@@ -62,9 +60,7 @@ class AppTheme {
         color: surface,
         elevation: 6,
         shadowColor: Colors.black.withAlpha(20),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
@@ -74,7 +70,10 @@ class AppTheme {
         ),
         filled: true,
         fillColor: background,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: surface,

@@ -67,7 +67,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       senderUid: widget.currentUser.uid,
       senderName: widget.currentUser.username,
       senderImage: widget.currentUser.profileImage,
-      text: text,
+      groupId: widget.group.id,
+      type: 'text',
+      content: text,
       createdAt: DateTime.now(),
     );
 
@@ -119,7 +121,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               const SizedBox(height: 4),
             ],
             Text(
-              message.text,
+              message.content,
               style: TextStyle(
                 color: isOwnMessage
                     ? colorScheme.onPrimary
@@ -198,7 +200,10 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   ? '${typers.first} is typing...'
                   : 'Several people are typing...';
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -234,7 +239,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      fillColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 18,
                         vertical: 14,

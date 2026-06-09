@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/user_model.dart';
 import '../services/database_service.dart';
 import '../widgets/user_tile.dart';
+import 'direct_message_screen.dart';
 
 class FriendsListScreen extends StatefulWidget {
   final String currentUid;
-  const FriendsListScreen({super.key, required this.currentUid});
+  final AppUser? currentUser;
+  const FriendsListScreen({
+    super.key,
+    required this.currentUid,
+    this.currentUser,
+  });
 
   @override
   State<FriendsListScreen> createState() => _FriendsListScreenState();
@@ -52,12 +59,26 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                 itemCount: friends.length,
                 itemBuilder: (context, index) {
                   final friend = friends[index];
+                  final chatId = _getChatId(widget.currentUid, friend.uid);
                   return UserTile(
                     user: friend,
                     subtitle: friend.email,
                     actionLabel: 'Chat',
                     actionColor: const Color(0xFF4CAF50),
-                    onAction: () {},
+                    onAction: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DirectMessageScreen(
+                            currentUser: widget.currentUser ?? currentUser,
+                            currentUserAuthData:
+                                FirebaseAuth.instance.currentUser!,
+                            friend: friend,
+                            chatId: chatId,
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               );
@@ -66,5 +87,11 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
         },
       ),
     );
+  }
+
+  String _getChatId(String uid1, String uid2) {
+    final List<String> ids = [uid1, uid2];
+    ids.sort();
+    return ids.join('_');
   }
 }

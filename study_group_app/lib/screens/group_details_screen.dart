@@ -34,7 +34,11 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   }
 
   Widget _buildInfoBadge(
-      IconData icon, String label, String value, Color color) {
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       decoration: BoxDecoration(
@@ -165,8 +169,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
             ),
           ),
         ),
-        if (role == 'admin')
-          const Text('👑', style: TextStyle(fontSize: 16)),
+        if (role == 'admin') const Text('👑', style: TextStyle(fontSize: 16)),
       ],
     );
   }
@@ -199,8 +202,9 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(18),
                   child: ConstrainedBox(
-                    constraints:
-                        BoxConstraints(minHeight: constraints.maxHeight),
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
                     child: IntrinsicHeight(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,10 +213,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                           Container(
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFF6C63FF),
-                                  Color(0xFF8D6CFF)
-                                ],
+                                colors: [Color(0xFF6C63FF), Color(0xFF8D6CFF)],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
@@ -242,7 +243,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                                           gradient: LinearGradient(
                                             colors: [
                                               Color(0xFF43E97B),
-                                              Color(0xFF38D39F)
+                                              Color(0xFF38D39F),
                                             ],
                                             begin: Alignment.topLeft,
                                             end: Alignment.bottomRight,
@@ -279,17 +280,18 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                                             Row(
                                               children: [
                                                 Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 7,
-                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 7,
+                                                      ),
                                                   decoration: BoxDecoration(
                                                     color: Colors.white
                                                         .withAlpha(56),
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                            16),
+                                                          16,
+                                                        ),
                                                   ),
                                                   child: Text(
                                                     group.subject,
@@ -303,9 +305,12 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                                                 ),
                                                 const SizedBox(width: 10),
                                                 if (isAdmin)
-                                                  const Text('👑',
-                                                      style: TextStyle(
-                                                          fontSize: 22)),
+                                                  const Text(
+                                                    '👑',
+                                                    style: TextStyle(
+                                                      fontSize: 22,
+                                                    ),
+                                                  ),
                                               ],
                                             ),
                                           ],
@@ -391,8 +396,10 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                                 () {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                        content: Text(
-                                            'Notes feature coming soon!')),
+                                      content: Text(
+                                        'Notes feature coming soon!',
+                                      ),
+                                    ),
                                   );
                                 },
                               ),
@@ -408,8 +415,8 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                                 () {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                        content:
-                                            Text('Tasks coming soon!')),
+                                      content: Text('Tasks coming soon!'),
+                                    ),
                                   );
                                 },
                               ),
@@ -421,8 +428,8 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                                 () {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                        content:
-                                            Text('Quiz module coming soon!')),
+                                      content: Text('Quiz module coming soon!'),
+                                    ),
                                   );
                                 },
                               ),
@@ -483,15 +490,17 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                                 const SizedBox(width: 12),
                                 ElevatedButton.icon(
                                   onPressed: () async {
-                                    final messenger =
-                                        ScaffoldMessenger.of(context);
+                                    final messenger = ScaffoldMessenger.of(
+                                      context,
+                                    );
                                     await Clipboard.setData(
-                                        ClipboardData(text: inviteLink));
+                                      ClipboardData(text: inviteLink),
+                                    );
                                     if (mounted) {
                                       messenger.showSnackBar(
                                         const SnackBar(
-                                            content: Text(
-                                                'Invite link copied.')),
+                                          content: Text('Invite link copied.'),
+                                        ),
                                       );
                                     }
                                   },
@@ -501,8 +510,11 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                                       borderRadius: BorderRadius.circular(24),
                                     ),
                                   ),
-                                  icon: const Icon(Icons.copy,
-                                      color: Colors.white, size: 16),
+                                  icon: const Icon(
+                                    Icons.copy,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
                                   label: const Text(
                                     'Copy',
                                     style: TextStyle(color: Colors.white),
@@ -542,7 +554,8 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                                   ConnectionState.waiting) {
                                 return Center(
                                   child: CircularProgressIndicator(
-                                      color: colorScheme.primary),
+                                    color: colorScheme.primary,
+                                  ),
                                 );
                               }
                               final members = snapshot.data ?? [];
@@ -560,15 +573,18 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                                 scrollDirection: Axis.horizontal,
                                 child: Row(
                                   children: members
-                                      .map((member) => Padding(
-                                            padding: const EdgeInsets.only(
-                                                right: 14),
-                                            child: _buildMemberAvatar(
-                                              member,
-                                              group.memberRoles[member.uid] ??
-                                                  'member',
-                                            ),
-                                          ))
+                                      .map(
+                                        (member) => Padding(
+                                          padding: const EdgeInsets.only(
+                                            right: 14,
+                                          ),
+                                          child: _buildMemberAvatar(
+                                            member,
+                                            group.memberRoles[member.uid] ??
+                                                'member',
+                                          ),
+                                        ),
+                                      )
                                       .toList(),
                                 ),
                               );
@@ -594,8 +610,9 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF6C63FF),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(24),
                                 ),
@@ -634,12 +651,14 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                                 },
                                 style: OutlinedButton.styleFrom(
                                   side: const BorderSide(
-                                      color: Color(0xFF6C63FF)),
+                                    color: Color(0xFF6C63FF),
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(24),
                                   ),
                                   padding: const EdgeInsets.symmetric(
-                                      vertical: 16),
+                                    vertical: 16,
+                                  ),
                                 ),
                                 child: Text(
                                   'Add Members',

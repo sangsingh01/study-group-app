@@ -1,23 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class GroupMessage {
+class DirectMessage {
   final String id; // messageId
   final String senderUid;
+  final String receiverUid;
   final String senderName;
   final String? senderImage;
-  final String groupId;
   final String type; // 'text' | 'note' | 'image'
-  final String content; // text or note content or image filename/alt
-  final String? imageUrl; // if type == 'image'
+  final String content;
+  final String? imageUrl;
   final DateTime createdAt;
   final bool edited;
 
-  GroupMessage({
+  DirectMessage({
     required this.id,
     required this.senderUid,
+    required this.receiverUid,
     required this.senderName,
     this.senderImage,
-    required this.groupId,
     required this.type,
     required this.content,
     this.imageUrl,
@@ -29,9 +29,9 @@ class GroupMessage {
     return {
       'id': id,
       'senderUid': senderUid,
+      'receiverUid': receiverUid,
       'senderName': senderName,
       'senderImage': senderImage,
-      'groupId': groupId,
       'type': type,
       'content': content,
       'imageUrl': imageUrl,
@@ -40,15 +40,14 @@ class GroupMessage {
     };
   }
 
-  factory GroupMessage.fromMap(Map<String, dynamic> map) {
-    // Backwards compatibility: older messages might have 'text'
+  factory DirectMessage.fromMap(Map<String, dynamic> map) {
     final content = map['content'] ?? map['text'] ?? '';
-    return GroupMessage(
+    return DirectMessage(
       id: map['id'] ?? '',
       senderUid: map['senderUid'] ?? '',
+      receiverUid: map['receiverUid'] ?? map['toUid'] ?? '',
       senderName: map['senderName'] ?? '',
       senderImage: map['senderImage'] as String?,
-      groupId: map['groupId'] ?? map['group'] ?? '',
       type: map['type'] ?? (map['imageUrl'] != null ? 'image' : 'text'),
       content: content,
       imageUrl: map['imageUrl'] as String?,

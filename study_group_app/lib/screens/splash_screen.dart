@@ -26,7 +26,10 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _logoScaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _logoAnimationController, curve: Curves.elasticOut),
+      CurvedAnimation(
+        parent: _logoAnimationController,
+        curve: Curves.elasticOut,
+      ),
     );
 
     _logoAnimationController.forward();
@@ -128,10 +131,7 @@ class _SplashScreenState extends State<SplashScreen>
               // Tagline
               Text(
                 'Learn Together, Grow Together',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  color: Colors.white70,
-                ),
+                style: GoogleFonts.poppins(fontSize: 16, color: Colors.white70),
                 textAlign: TextAlign.center,
               ),
 

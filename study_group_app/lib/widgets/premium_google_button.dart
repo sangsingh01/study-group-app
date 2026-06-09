@@ -27,29 +27,12 @@ class PremiumGoogleButton extends StatefulWidget {
   State<PremiumGoogleButton> createState() => _PremiumGoogleButtonState();
 }
 
-class _PremiumGoogleButtonState extends State<PremiumGoogleButton>
-    with SingleTickerProviderStateMixin {
+class _PremiumGoogleButtonState extends State<PremiumGoogleButton> {
   bool _hovering = false;
   bool _pressed = false;
 
-  late final AnimationController _shimmer = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1200),
-  );
-
-  @override
-  void dispose() {
-    _shimmer.dispose();
-    super.dispose();
-  }
-
   void _onHover(bool hover) {
     setState(() => _hovering = hover);
-    if (hover) {
-      _shimmer.repeat();
-    } else {
-      _shimmer.stop();
-    }
   }
 
   @override
@@ -94,11 +77,15 @@ class _PremiumGoogleButtonState extends State<PremiumGoogleButton>
                         color: bgColor,
                         borderRadius: BorderRadius.circular(widget.radius),
                         border: Border.all(
-                          color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.05),
+                          color: isDark
+                              ? Colors.white.withOpacity(0.04)
+                              : Colors.black.withOpacity(0.05),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(isDark ? 0.45 : 0.08),
+                            color: Colors.black.withOpacity(
+                              isDark ? 0.45 : 0.08,
+                            ),
                             blurRadius: 18,
                             offset: const Offset(0, 8),
                           ),
@@ -113,7 +100,9 @@ class _PremiumGoogleButtonState extends State<PremiumGoogleButton>
                             width: widget.height - 20,
                             height: widget.height - 20,
                             decoration: BoxDecoration(
-                              color: isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade50,
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.06)
+                                  : Colors.grey.shade50,
                               shape: BoxShape.circle,
                             ),
                             child: ClipOval(
@@ -122,11 +111,12 @@ class _PremiumGoogleButtonState extends State<PremiumGoogleButton>
                                 child: Image.asset(
                                   'assets/google_icon.png',
                                   fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) => const Icon(
-                                    Icons.g_mobiledata_rounded,
-                                    color: Colors.red,
-                                    size: 20,
-                                  ),
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Icon(
+                                        Icons.g_mobiledata_rounded,
+                                        color: Colors.red,
+                                        size: 20,
+                                      ),
                                 ),
                               ),
                             ),
@@ -135,44 +125,50 @@ class _PremiumGoogleButtonState extends State<PremiumGoogleButton>
 
                           // Label / loading
                           Expanded(
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 280),
-                              child: widget.isLoading
-                                  ? Row(
-                                      key: const ValueKey('loading'),
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        SizedBox(
-                                          width: 22,
-                                          height: 22,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2.4,
-                                            valueColor: AlwaysStoppedAnimation<Color>(glowA),
-                                          ),
+                            child: widget.isLoading
+                                ? Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.4,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                glowA,
+                                              ),
                                         ),
-                                        const SizedBox(width: 12),
-                                        Text(
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
                                           'Signing in...',
                                           textAlign: TextAlign.center,
+                                          overflow: TextOverflow.ellipsis,
                                           style: GoogleFonts.poppins(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,
-                                            color: isDark ? Colors.white : Colors.black87,
+                                            color: isDark
+                                                ? Colors.white
+                                                : Colors.black87,
                                           ),
                                         ),
-                                      ],
-                                    )
-                                  : Text(
-                                      widget.label,
-                                      key: const ValueKey('label'),
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark ? Colors.white : Colors.black87,
                                       ),
+                                    ],
+                                  )
+                                : Text(
+                                    widget.label,
+                                    textAlign: TextAlign.center,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87,
                                     ),
-                            ),
+                                  ),
                           ),
 
                           // spacer to balance logo
@@ -194,7 +190,10 @@ class _PremiumGoogleButtonState extends State<PremiumGoogleButton>
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(widget.radius),
                           gradient: LinearGradient(
-                            colors: [glowA.withOpacity(0.14), glowB.withOpacity(0.06)],
+                            colors: [
+                              glowA.withOpacity(0.14),
+                              glowB.withOpacity(0.06),
+                            ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),

@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class AppUser {
   final String uid;
   final String username;
@@ -8,6 +10,8 @@ class AppUser {
   final List<String> sentRequests;
   final List<String> groupInvites;
   final List<String> blockedUsers;
+  final bool isActive;
+  final DateTime? lastSeen;
 
   AppUser({
     required this.uid,
@@ -19,6 +23,8 @@ class AppUser {
     this.sentRequests = const [],
     this.groupInvites = const [],
     this.blockedUsers = const [],
+    this.isActive = false,
+    this.lastSeen,
   });
 
   Map<String, dynamic> toMap() {
@@ -32,6 +38,8 @@ class AppUser {
       'sentRequests': sentRequests,
       'groupInvites': groupInvites,
       'blockedUsers': blockedUsers,
+      'isActive': isActive,
+      'lastSeen': lastSeen != null ? Timestamp.fromDate(lastSeen!) : null,
     };
   }
 
@@ -46,6 +54,10 @@ class AppUser {
       sentRequests: List<String>.from(map['sentRequests'] ?? []),
       groupInvites: List<String>.from(map['groupInvites'] ?? []),
       blockedUsers: List<String>.from(map['blockedUsers'] ?? []),
+      isActive: map['isActive'] == true,
+      lastSeen: map['lastSeen'] != null
+          ? (map['lastSeen'] as Timestamp).toDate()
+          : null,
     );
   }
 
