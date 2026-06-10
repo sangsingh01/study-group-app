@@ -1,8 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 
 import '../models/user_model.dart';
 import '../models/message_model.dart';
@@ -36,7 +36,6 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   Timer? _typingTimer;
   bool _amITyping = false;
 
-  // Cache stream instance so Flutter doesn't recreate the connection on every build frame
   late Stream<List<MessageModel>> _messageStream;
 
   final List<String> _quickEmojis = ['😀', '😂', '😍', '👋', '👍', '🙏', '🔥', '✨', '📚', '🎯'];
@@ -46,8 +45,6 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
     super.initState();
     _messageController.addListener(_onMessageTextChanged);
     _markChatAsRead();
-    
-    // FIX 1: Establish stream once on init to prevent stream recycling stutters
     _messageStream = _databaseService.getDirectMessages(widget.chatId);
   }
 
@@ -99,6 +96,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
     try {
       await _databaseService.sendDirectMessage(widget.chatId, messageNode, widget.friend.uid);
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Delivery error: $e'), backgroundColor: const Color(0xFFFF6584)),
       );
@@ -186,7 +184,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: widget.friend.isActive ? const Color(0xFF43E97B) : Colors.white.withOpacity(0.75),
+                      color: widget.friend.isActive ? const Color(0xFF43E97B) : Colors.white.withValues(alpha: 0.75),
                     ),
                   ),
                 ],
@@ -214,7 +212,6 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
         children: [
           Expanded(
             child: StreamBuilder<List<MessageModel>>(
-              // Pass the cached reference instead of calling database functions natively inside build block
               stream: _messageStream, 
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
@@ -223,6 +220,17 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
 
                 final messages = snapshot.data ?? [];
                 if (messages.isEmpty) return _buildEmptyState();
+
+                // Auto Scroll Execution upon incoming stream signals
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      0.0,
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                });
 
                 return ListView.builder(
                   controller: _scrollController,
@@ -245,7 +253,6 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                     }
 
                     return Column(
-                      // FIX 2: Added explicit structural ValueKeys to avoid bubble item blinking
                       key: ValueKey(currentMsg.id ?? index.toString()), 
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -335,8 +342,8 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                     )
                   : BoxDecoration(
                       color: Colors.white,
-                      border: Border.all(color: Colors.grey.withOpacity(0.3), width: 0.5),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))],
+                      border: Border.all(color: Colors.grey.withValues(alpha: 0.3), width: 0.5),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2))],
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(18),
                         topRight: Radius.circular(18),
@@ -406,7 +413,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, -3))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, -3))],
       ),
       padding: EdgeInsets.only(
         left: 12, 

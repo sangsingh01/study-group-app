@@ -103,7 +103,8 @@ class DatabaseService {
     for (final chunk in chunks) {
       final query = await _firestore
           .collection('users')
-          .where('uid', whereIn: chunk)
+          // Using FieldPath.documentId targets the actual document name/ID key directly
+          .where(FieldPath.documentId, whereIn: chunk)
           .get();
       results.addAll(query.docs.map((doc) => AppUser.fromMap(doc.data())));
     }
@@ -115,10 +116,11 @@ class DatabaseService {
       return Stream<List<AppUser>>.value([]);
     }
 
+    // Branch 1: If 10 or fewer UIDs, handle it in a single quick stream subscription
     if (uids.length <= 10) {
       return _firestore
           .collection('users')
-          .where('uid', whereIn: uids)
+          .where(FieldPath.documentId, whereIn: uids) // Fixed here
           .snapshots()
           .map(
             (snapshot) => snapshot.docs
@@ -127,6 +129,7 @@ class DatabaseService {
           );
     }
 
+    // Branch 2: If more than 10 UIDs, merge multiple chunked stream listeners safely
     final controller = StreamController<List<AppUser>>.broadcast();
     final subs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
     final cache = <String, AppUser>{};
@@ -138,7 +141,7 @@ class DatabaseService {
     for (final chunk in _chunkList(uids, 10)) {
       final stream = _firestore
           .collection('users')
-          .where('uid', whereIn: chunk)
+          .where(FieldPath.documentId, whereIn: chunk) // Fixed here
           .snapshots();
       final subscription = stream.listen((snapshot) {
         for (final doc in snapshot.docs) {
@@ -158,7 +161,6 @@ class DatabaseService {
 
     return controller.stream;
   }
-
   List<List<T>> _chunkList<T>(List<T> list, int chunkSize) {
     final chunks = <List<T>>[];
     for (var i = 0; i < list.length; i += chunkSize) {
@@ -207,26 +209,31 @@ class DatabaseService {
       if (!fromSnapshot.exists || !toSnapshot.exists) return;
 
       final fromData = fromSnapshot.data() ?? {};
+      final toData = toSnapshot.data() ?? {};
 
-      final List friendRequests = fromData['friendRequests'] ?? [];
-      final List friends = fromData['friends'] ?? [];
-      final List sentRequests = fromData['sentRequests'] ?? [];
+      // Pull current social states for validation rules
+      final List myFriends = fromData['friends'] ?? [];
+      final List mySentRequests = fromData['sentRequests'] ?? [];
+      final List receiverIncomingRequests = toData['friendRequests'] ?? [];
 
-      if (friendRequests.contains(toUid) ||
-          friends.contains(toUid) ||
-          sentRequests.contains(toUid)) {
-        return;
+      // Safe Check: Don't send if they are already friends, or if a request is already in transit
+      if (myFriends.contains(toUid) || 
+          mySentRequests.contains(toUid) || 
+          receiverIncomingRequests.contains(fromUid)) {
+        return; // Already sent or connected, exit safely.
       }
 
+      // 1. Deliver the request directly into the RECEIVER's incoming requests array list
       transaction.update(toRef, {
         'friendRequests': FieldValue.arrayUnion([fromUid]),
       });
+
+      // 2. Track the request inside the SENDER's outgoing data records
       transaction.update(fromRef, {
         'sentRequests': FieldValue.arrayUnion([toUid]),
       });
     });
   }
-
   // --- SPLIT TRANSACTION: HANDSHAKE AND CHAT ISOLATION ---
   Future<void> acceptFriendRequest(
     String currentUid,
@@ -664,4 +671,4 @@ class DatabaseService {
       'memberRoles.$userId': FieldValue.delete(),
     });
   }
-}
+}      
