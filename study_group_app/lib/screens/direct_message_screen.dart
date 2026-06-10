@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
 import '../models/user_model.dart';
+import '../models/message_model.dart';
 import '../services/database_service.dart';
 
 class DirectMessageScreen extends StatefulWidget {
@@ -28,207 +30,227 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   final DatabaseService _databaseService = DatabaseService();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  bool _isTyping = false;
+  
+  bool _isTextNotEmpty = false;
+  bool _showEmojiTray = false;
+  Timer? _typingTimer;
+  bool _amITyping = false;
+
+  // Cache stream instance so Flutter doesn't recreate the connection on every build frame
+  late Stream<List<MessageModel>> _messageStream;
+
+  final List<String> _quickEmojis = ['😀', '😂', '😍', '👋', '👍', '🙏', '🔥', '✨', '📚', '🎯'];
 
   @override
   void initState() {
     super.initState();
-    _messageController.addListener(() {
-      setState(() {
-        _isTyping = _messageController.text.isNotEmpty;
-      });
+    _messageController.addListener(_onMessageTextChanged);
+    _markChatAsRead();
+    
+    // FIX 1: Establish stream once on init to prevent stream recycling stutters
+    _messageStream = _databaseService.getDirectMessages(widget.chatId);
+  }
+
+  void _markChatAsRead() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _databaseService.markMessagesAsRead(widget.chatId, widget.currentUserAuthData.uid);
     });
-    // Mark messages as read when screen is opened
-    _databaseService.markAsRead(widget.chatId, widget.currentUserAuthData.uid);
   }
 
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
+  void _onMessageTextChanged() {
+    final hasText = _messageController.text.trim().isNotEmpty;
+    if (hasText != _isTextNotEmpty) {
+      setState(() => _isTextNotEmpty = hasText);
     }
+
+    if (hasText && !_amITyping) {
+      _amITyping = true;
+      _databaseService.updateTypingStatus(widget.chatId, widget.currentUserAuthData.uid, true);
+    }
+
+    _typingTimer?.cancel();
+    _typingTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (_amITyping) {
+        _amITyping = false;
+        _databaseService.updateTypingStatus(widget.chatId, widget.currentUserAuthData.uid, false);
+      }
+    });
   }
 
-  void _sendMessage() {
-    final message = _messageController.text.trim();
-    if (message.isEmpty) return;
-
-    _databaseService.sendMessage(
-      widget.chatId,
-      widget.currentUserAuthData.uid,
-      widget.friend.uid,
-      message,
-    );
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
 
     _messageController.clear();
-    _scrollToBottom();
+    _typingTimer?.cancel();
+    if (_amITyping) {
+      _amITyping = false;
+      _databaseService.updateTypingStatus(widget.chatId, widget.currentUserAuthData.uid, false);
+    }
+
+    final messageNode = MessageModel(
+      senderId: widget.currentUserAuthData.uid,
+      senderName: widget.currentUser?.username ?? 'User',
+      receiverId: widget.friend.uid,
+      message: text,
+      timestamp: DateTime.now(),
+    );
+
+    try {
+      await _databaseService.sendDirectMessage(widget.chatId, messageNode, widget.friend.uid);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Delivery error: $e'), backgroundColor: const Color(0xFFFF6584)),
+      );
+    }
   }
 
   String _formatMessageTime(DateTime dateTime) {
     return DateFormat('hh:mm a').format(dateTime);
   }
 
-  String _formatDateDivider(DateTime dateTime) {
+  String _formatGroupDate(DateTime dateTime) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
-    final messageDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final checkDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
 
-    if (messageDate == today) {
-      return 'Today';
-    } else if (messageDate == yesterday) {
-      return 'Yesterday';
-    } else {
-      return DateFormat('dd MMMM yyyy').format(dateTime);
+    if (checkDate == today) return 'Today';
+    if (checkDate == yesterday) return 'Yesterday';
+    return DateFormat('dd MMMM yyyy').format(dateTime);
+  }
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year && date1.month == date2.month && date1.day == date2.day;
+  }
+
+  @override
+  void dispose() {
+    _typingTimer?.cancel();
+    if (_amITyping) {
+      _databaseService.updateTypingStatus(widget.chatId, widget.currentUserAuthData.uid, false);
     }
+    _messageController.removeListener(_onMessageTextChanged);
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final primary = colorScheme.primary;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FE),
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        backgroundColor: primary,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+        automaticallyImplyLeading: false,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF4C86FF), Color(0xFF6C63FF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
         ),
         title: Row(
           children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
             CircleAvatar(
               radius: 18,
-              backgroundImage: widget.friend.profileImage != null
-                  ? NetworkImage(widget.friend.profileImage!)
-                  : null,
-              backgroundColor: primary.withAlpha(100),
+              backgroundImage: widget.friend.profileImage != null ? NetworkImage(widget.friend.profileImage!) : null,
+              backgroundColor: Colors.white30,
               child: widget.friend.profileImage == null
                   ? Text(
                       widget.friend.initials,
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        fontSize: 10,
-                      ),
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
                     )
                   : null,
             ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.friend.username,
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.friend.username,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
-                ),
-                Text(
-                  widget.friend.isActive
-                      ? 'Online'
-                      : 'Last seen ${widget.friend.lastSeen != null ? DateFormat('hh:mm a').format(widget.friend.lastSeen!) : 'recently'}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white70,
+                  Text(
+                    widget.friend.isActive ? 'Online' : 'Last seen today',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: widget.friend.isActive ? const Color(0xFF43E97B) : Colors.white.withOpacity(0.75),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.call_rounded, color: Colors.white),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Voice call coming soon!')),
-              );
-            },
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Voice call coming soon!'), backgroundColor: Color(0xFF6C63FF)),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.videocam_rounded, color: Colors.white),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Video call coming soon!')),
-              );
-            },
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Video call coming soon!'), backgroundColor: Color(0xFF6C63FF)),
+            ),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Column(
         children: [
-          // Messages list
           Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _databaseService.getMessages(widget.chatId),
+            child: StreamBuilder<List<MessageModel>>(
+              // Pass the cached reference instead of calling database functions natively inside build block
+              stream: _messageStream, 
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(
-                    child: CircularProgressIndicator(color: primary),
-                  );
+                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF)));
                 }
 
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return _buildEmptyState(context);
-                }
-
-                final messages = snapshot.data!;
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _scrollToBottom();
-                });
+                final messages = snapshot.data ?? [];
+                if (messages.isEmpty) return _buildEmptyState();
 
                 return ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
+                  reverse: true, 
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final message = messages[index];
-                    final isMyMessage =
-                        message['senderId'] == widget.currentUserAuthData.uid;
-                    final timestamp = (message['timestamp']).toDate();
+                    final currentMsg = messages[messages.length - 1 - index];
+                    final isMine = currentMsg.senderId == widget.currentUserAuthData.uid;
 
-                    // Show date divider if date changed
-                    Widget dateWidget = const SizedBox.shrink();
-                    if (index == 0 ||
-                        !_isSameDay(
-                          timestamp,
-                          (messages[index - 1]['timestamp']).toDate(),
-                        )) {
-                      dateWidget = _buildDateDivider(timestamp);
+                    Widget dateBarElement = const SizedBox.shrink();
+                    
+                    if (index == messages.length - 1) {
+                      dateBarElement = _buildDateDivider(currentMsg.timestamp);
+                    } else {
+                      final nextOlderMsg = messages[messages.length - 1 - (index + 1)];
+                      if (!_isSameDay(currentMsg.timestamp, nextOlderMsg.timestamp)) {
+                        dateBarElement = _buildDateDivider(currentMsg.timestamp);
+                      }
                     }
 
                     return Column(
+                      // FIX 2: Added explicit structural ValueKeys to avoid bubble item blinking
+                      key: ValueKey(currentMsg.id ?? index.toString()), 
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        dateWidget,
-                        _buildMessageBubble(
-                          context,
-                          message['message'] ?? '',
-                          isMyMessage,
-                          timestamp,
-                          message['isRead'] ?? false,
-                        ),
+                        dateBarElement,
+                        _buildMessageBubble(currentMsg, isMine),
                       ],
                     );
                   },
@@ -236,318 +258,238 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
               },
             ),
           ),
-          // Message input bar
+          
+          StreamBuilder<bool>(
+            stream: _databaseService.getFriendTypingStatus(widget.chatId, widget.friend.uid),
+            builder: (context, snapshot) {
+              if (snapshot.data == true) return _buildTypingIndicator();
+              return const SizedBox.shrink();
+            },
+          ),
+          
           _buildMessageInputBar(context),
+          if (_showEmojiTray) _buildEmojiTrayWidget(),
         ],
       ),
     );
   }
 
-  bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year &&
-        date1.month == date2.month &&
-        date1.day == date2.day;
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
+  Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircleAvatar(
-            radius: 48,
-            backgroundImage: widget.friend.profileImage != null
-                ? NetworkImage(widget.friend.profileImage!)
-                : null,
-            backgroundColor: colorScheme.primary.withAlpha(100),
+            radius: 40,
+            backgroundImage: widget.friend.profileImage != null ? NetworkImage(widget.friend.profileImage!) : null,
+            backgroundColor: Colors.grey[300],
             child: widget.friend.profileImage == null
-                ? Text(
-                    widget.friend.initials,
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      fontSize: 24,
-                    ),
-                  )
+                ? Text(widget.friend.initials, style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white))
                 : null,
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Say hi to ${widget.friend.username}!',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: colorScheme.onBackground,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '👋',
-            style: GoogleFonts.poppins(fontSize: 32),
-          ),
+          const SizedBox(height: 12),
+          Text(widget.friend.username, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text('Say hi to ${widget.friend.username}!', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
+          const SizedBox(height: 12),
+          const Text('👋', style: TextStyle(fontSize: 44)),
         ],
       ),
     );
   }
 
   Widget _buildDateDivider(DateTime date) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: colorScheme.onBackground.withAlpha(25),
-            borderRadius: BorderRadius.circular(12),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(16)),
           child: Text(
-            _formatDateDivider(date),
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onBackground.withAlpha(150),
-            ),
+            _formatGroupDate(date),
+            style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[700]),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildMessageBubble(
-    BuildContext context,
-    String message,
-    bool isMyMessage,
-    DateTime timestamp,
-    bool isRead,
-  ) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final primary = colorScheme.primary;
-
-    if (isMyMessage) {
-      // My message (right side)
-      return Align(
-        alignment: Alignment.centerRight,
+  Widget _buildMessageBubble(MessageModel msg, bool isMine) {
+    return Align(
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: isMine ? const EdgeInsets.only(left: 60, bottom: 8) : const EdgeInsets.only(right: 60, bottom: 8),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             Container(
-              margin: const EdgeInsets.only(left: 48, bottom: 4),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    primary,
-                    const Color(0xFF8B5CF6),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(18),
-                  topRight: Radius.circular(18),
-                  bottomLeft: Radius.circular(18),
-                  bottomRight: Radius.circular(4),
-                ),
-              ),
+              decoration: isMine
+                  ? const BoxDecoration(
+                      gradient: LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF8B5CF6)]),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(18),
+                        topRight: Radius.circular(18),
+                        bottomRight: Radius.circular(4),
+                        bottomLeft: Radius.circular(18),
+                      ),
+                    )
+                  : BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: Colors.grey.withOpacity(0.3), width: 0.5),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))],
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(18),
+                        topRight: Radius.circular(18),
+                        bottomRight: Radius.circular(18),
+                        bottomLeft: Radius.circular(4),
+                      ),
+                    ),
               child: Text(
-                message,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
+                msg.message,
+                style: GoogleFonts.poppins(fontSize: 14, color: isMine ? Colors.white : const Color(0xFF1A1A2E), fontWeight: FontWeight.w500),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(right: 4, bottom: 8),
+              padding: const EdgeInsets.only(top: 3, left: 4, right: 4),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _formatMessageTime(timestamp),
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withAlpha(180),
-                    ),
+                    _formatMessageTime(msg.timestamp),
+                    style: GoogleFonts.poppins(fontSize: 10, color: isMine ? Colors.grey[600] : Colors.grey[500]),
                   ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    isRead ? Icons.done_all_rounded : Icons.done_rounded,
-                    size: 14,
-                    color: Colors.white.withAlpha(180),
-                  ),
+                  if (isMine) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      msg.isRead ? Icons.done_all_rounded : Icons.done_rounded,
+                      size: 13,
+                      color: msg.isRead ? const Color(0xFF6C63FF) : Colors.grey[400],
+                    )
+                  ]
                 ],
               ),
             ),
           ],
         ),
-      );
-    } else {
-      // Friend message (left side)
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(left: 16, bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              margin: const EdgeInsets.only(right: 48, bottom: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(18),
-                  bottomLeft: Radius.circular(18),
-                  bottomRight: Radius.circular(18),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(6),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Text(
-                message,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF1A1A2E),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 8),
-              child: Text(
-                _formatMessageTime(timestamp),
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: colorScheme.onBackground.withAlpha(150),
-                ),
-              ),
-            ),
+            Container(width: 6, height: 6, decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle)),
+            const SizedBox(width: 3),
+            Container(width: 6, height: 6, decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle)),
+            const SizedBox(width: 3),
+            Container(width: 6, height: 6, decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle)),
           ],
         ),
-      );
-    }
+      ),
+    );
   }
 
   Widget _buildMessageInputBar(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final primary = colorScheme.primary;
+    final bool isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(6),
-            blurRadius: 12,
-            offset: const Offset(0, -4),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, -3))],
       ),
       padding: EdgeInsets.only(
-        left: 12,
-        right: 12,
-        top: 12,
-        bottom: 12 + MediaQuery.of(context).viewInsets.bottom,
+        left: 12, 
+        right: 12, 
+        top: 8,
+        bottom: isKeyboardOpen ? 8 : 8 + MediaQuery.of(context).padding.bottom,
       ),
       child: Row(
         children: [
-          // Emoji button
           IconButton(
-            icon: const Icon(Icons.emoji_emotions_rounded),
+            icon: Icon(_showEmojiTray ? Icons.keyboard_rounded : Icons.emoji_emotions_outlined, color: Colors.grey[600]),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Emoji picker coming soon!')),
-              );
+              setState(() {
+                _showEmojiTray = !_showEmojiTray;
+                if (_showEmojiTray) FocusScope.of(context).unfocus();
+              });
             },
           ),
-          // Text input field
           Expanded(
-            child: TextField(
-              controller: _messageController,
-              maxLines: null,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                hintText: 'Type a message...',
-                hintStyle: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: colorScheme.onBackground.withAlpha(100),
+            child: Container(
+              decoration: BoxDecoration(color: const Color(0xFFF1F1F1), borderRadius: BorderRadius.circular(25)),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                controller: _messageController,
+                maxLines: 4,
+                minLines: 1,
+                textCapitalization: TextCapitalization.sentences,
+                style: GoogleFonts.poppins(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Type a message...',
+                  hintStyle: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
+                  border: InputBorder.none,
                 ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25),
-                  borderSide: BorderSide(
-                    color: colorScheme.onBackground.withAlpha(50),
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25),
-                  borderSide: BorderSide(
-                    color: colorScheme.onBackground.withAlpha(50),
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25),
-                  borderSide: BorderSide(color: primary),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: colorScheme.onBackground,
+                onTap: () => setState(() => _showEmojiTray = false),
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          // Send/Mic button
-          if (_isTyping)
-            GestureDetector(
-              onTap: _sendMessage,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: primary,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.send_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.mic_rounded),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Voice message coming soon!')),
-                );
-              },
-            ),
-          // Attachment button
-          IconButton(
-            icon: const Icon(Icons.attachment_rounded),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Attachments coming soon!')),
-              );
-            },
+          const SizedBox(width: 6),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: _isTextNotEmpty
+                ? GestureDetector(
+                    key: const ValueKey('sendBtn'),
+                    onTap: _sendMessage,
+                    child: Container(
+                      width: 40, height: 40,
+                      decoration: const BoxDecoration(color: Color(0xFF6C63FF), shape: BoxShape.circle),
+                      child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                    ),
+                  )
+                : IconButton(
+                    key: const ValueKey('micBtn'),
+                    icon: const Icon(Icons.mic_none_rounded, color: Colors.grey),
+                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Voice coming soon'), backgroundColor: Color(0xFF6C63FF)),
+                    ),
+                  ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmojiTrayWidget() {
+    return Container(
+      height: 64,
+      color: Colors.white,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        itemCount: _quickEmojis.length,
+        itemBuilder: (context, index) {
+          return InkWell(
+            onTap: () {
+              final val = _messageController.text;
+              _messageController.text = val + _quickEmojis[index];
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Center(child: Text(_quickEmojis[index], style: const TextStyle(fontSize: 24))),
+            ),
+          );
+        },
       ),
     );
   }

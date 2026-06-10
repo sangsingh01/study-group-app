@@ -4,11 +4,13 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart'; 
 
 import '../models/group_message.dart';
 import '../models/group_model.dart';
 import '../models/user_model.dart';
 import '../models/direct_message.dart';
+import '../models/message_model.dart';
 
 class DatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -204,12 +206,15 @@ class DatabaseService {
       final toSnapshot = await transaction.get(toRef);
       if (!fromSnapshot.exists || !toSnapshot.exists) return;
 
-      final fromUser = AppUser.fromMap(fromSnapshot.data()!);
-      final toUser = AppUser.fromMap(toSnapshot.data()!);
+      final fromData = fromSnapshot.data() ?? {};
 
-      if (toUser.friendRequests.contains(fromUid) ||
-          toUser.friends.contains(fromUid) ||
-          fromUser.sentRequests.contains(toUid)) {
+      final List friendRequests = fromData['friendRequests'] ?? [];
+      final List friends = fromData['friends'] ?? [];
+      final List sentRequests = fromData['sentRequests'] ?? [];
+
+      if (friendRequests.contains(toUid) ||
+          friends.contains(toUid) ||
+          sentRequests.contains(toUid)) {
         return;
       }
 
@@ -222,13 +227,18 @@ class DatabaseService {
     });
   }
 
+  // --- SPLIT TRANSACTION: HANDSHAKE AND CHAT ISOLATION ---
   Future<void> acceptFriendRequest(
     String currentUid,
     String requesterUid,
   ) async {
     final currentRef = _firestore.collection('users').doc(currentUid);
     final requesterRef = _firestore.collection('users').doc(requesterUid);
+    
+    final chatId = getChatId(currentUid, requesterUid);
+    final chatRef = _firestore.collection('chats').doc(chatId);
 
+    // STEP 1: Update both user documents within the transactional window
     await _firestore.runTransaction((transaction) async {
       final currentSnapshot = await transaction.get(currentRef);
       final requesterSnapshot = await transaction.get(requesterRef);
@@ -243,8 +253,22 @@ class DatabaseService {
         'sentRequests': FieldValue.arrayRemove([currentUid]),
       });
     });
+
+    // STEP 2: Create chat document separately OUTSIDE the user transaction scope
+    await chatRef.set({
+      'chatId': chatId,
+      'lastMessage': 'You are now connected! Start chatting 👋',
+      'lastMessageTime': Timestamp.now(),
+      'participants': [currentUid, requesterUid],
+      'users': [currentUid, requesterUid],
+      'unread_$currentUid': 0,
+      'unread_$requesterUid': 0,
+      'typing_$currentUid': false,
+      'typing_$requesterUid': false,
+    }, SetOptions(merge: true));
   }
 
+  // --- REPAIRED DECLINE TRANSACTION ---
   Future<void> declineFriendRequest(
     String currentUid,
     String requesterUid,
@@ -254,13 +278,18 @@ class DatabaseService {
 
     await _firestore.runTransaction((transaction) async {
       final currentSnapshot = await transaction.get(currentRef);
-      if (!currentSnapshot.exists) return;
-      transaction.update(currentRef, {
-        'friendRequests': FieldValue.arrayRemove([requesterUid]),
-      });
-      transaction.update(requesterRef, {
-        'sentRequests': FieldValue.arrayRemove([currentUid]),
-      });
+      final requesterSnapshot = await transaction.get(requesterRef);
+      
+      if (currentSnapshot.exists) {
+        transaction.update(currentRef, {
+          'friendRequests': FieldValue.arrayRemove([requesterUid]),
+        });
+      }
+      if (requesterSnapshot.exists) {
+        transaction.update(requesterRef, {
+          'sentRequests': FieldValue.arrayRemove([currentUid]),
+        });
+      }
     });
   }
 
@@ -357,7 +386,6 @@ class DatabaseService {
         .set(message.toMap());
   }
 
-  /// Upload image bytes to Firebase Storage and return download URL.
   Future<String> uploadImageData({
     required Uint8List bytes,
     required String path,
@@ -378,7 +406,6 @@ class DatabaseService {
     return url;
   }
 
-  /// Upload group image for a message and return download URL.
   Future<String> uploadGroupImage(
     Uint8List bytes,
     String groupId,
@@ -389,14 +416,12 @@ class DatabaseService {
     return uploadImageData(bytes: bytes, path: path, onProgress: onProgress);
   }
 
-  /// Helper to deterministically compute conversation id for two users.
   String _conversationId(String a, String b) {
     final parts = [a, b]..sort();
     return parts.join('_');
   }
 
-  /// Send direct message between two users (one-to-one chat)
-  Future<void> sendDirectMessage(DirectMessage message) async {
+  Future<void> sendLegacyDirectMessage(DirectMessage message) async {
     final convoId = _conversationId(message.senderUid, message.receiverUid);
     await _firestore
         .collection('direct_chats')
@@ -406,8 +431,7 @@ class DatabaseService {
         .set(message.toMap());
   }
 
-  /// Stream direct messages for conversation between two users
-  Stream<List<DirectMessage>> directMessages(String uidA, String uidB) {
+  Stream<List<DirectMessage>> legacyDirectMessages(String uidA, String uidB) {
     final convoId = _conversationId(uidA, uidB);
     return _firestore
         .collection('direct_chats')
@@ -422,7 +446,6 @@ class DatabaseService {
         );
   }
 
-  /// Update user presence fields in Firestore
   Future<void> setUserActive(String uid, bool isActive) async {
     final ref = _firestore.collection('users').doc(uid);
     await ref.set({
@@ -431,10 +454,8 @@ class DatabaseService {
     }, SetOptions(merge: true));
   }
 
-  /// Stream groups where the user is a member or admin. Merges two queries to provide an OR-like result.
   Stream<List<GroupModel>> getGroupsForUser(String userId) {
     final controller = StreamController<List<GroupModel>>.broadcast();
-
     final subs = <StreamSubscription>[];
     final Map<String, GroupModel> cache = {};
 
@@ -515,82 +536,110 @@ class DatabaseService {
         );
   }
 
-  // ===== Direct Message / Chat Methods =====
-
-  String _getChatId(String uid1, String uid2) {
+  String getChatId(String uid1, String uid2) {
     final List<String> ids = [uid1, uid2];
     ids.sort();
     return ids.join('_');
   }
 
-  Future<void> sendMessage(
+  Future<void> sendDirectMessage(
     String chatId,
-    String senderId,
+    MessageModel message,
     String receiverId,
-    String message,
   ) async {
-    final messageId = _firestore.collection('chats').doc().id;
-    final timestamp = DateTime.now();
-
-    await _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .doc(messageId)
-        .set({
-          'id': messageId,
-          'senderId': senderId,
-          'receiverId': receiverId,
-          'message': message,
-          'timestamp': Timestamp.fromDate(timestamp),
-          'isRead': false,
-          'messageType': 'text',
-        });
-
-    // Update chat metadata
-    await _firestore
-        .collection('chats')
-        .doc(chatId)
-        .set({
-          'lastMessage': message,
-          'lastMessageTime': Timestamp.fromDate(timestamp),
-          'participants': [senderId, receiverId],
-          'unread_$receiverId': FieldValue.increment(1),
-        }, SetOptions(merge: true));
+    try {
+      final batch = _firestore.batch();
+      
+      final msgRef = _firestore
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .doc(message.id);
+      batch.set(msgRef, message.toMap());
+      
+      final chatRef = _firestore.collection('chats').doc(chatId);
+      batch.set(chatRef, {
+        'lastMessage': message.message,
+        'lastMessageTime': Timestamp.fromDate(message.timestamp),
+        'participants': [message.senderId, receiverId],
+        'users': [message.senderId, receiverId],
+        'unread_$receiverId': FieldValue.increment(1),
+        'unread_${message.senderId}': 0,
+      }, SetOptions(merge: true));
+      
+      await batch.commit();
+    } catch (e) {
+      debugPrint('Error sending direct message: $e');
+      rethrow;
+    }
   }
 
-  Stream<List<Map<String, dynamic>>> getMessages(String chatId) {
+  Stream<List<MessageModel>> getDirectMessages(String chatId) {
     return _firestore
         .collection('chats')
         .doc(chatId)
         .collection('messages')
         .orderBy('timestamp', descending: false)
         .snapshots()
-        .map(
-          (snap) => snap.docs
-              .map((doc) => doc.data())
-              .toList(),
-        );
+        .map((snap) => snap.docs
+            .map((doc) => MessageModel.fromMap(doc.data()))
+            .toList());
   }
 
   Stream<List<Map<String, dynamic>>> getChatList(String userId) {
     return _firestore
         .collection('chats')
         .where('participants', arrayContains: userId)
-        .orderBy('lastMessageTime', descending: true)
         .snapshots()
-        .map(
-          (snap) => snap.docs
-              .map((doc) => doc.data())
-              .toList(),
-        );
+        .map((snap) => snap.docs.map((doc) {
+              final data = doc.data();
+              data['chatId'] = doc.id;
+              return data;
+            }).toList());
   }
 
-  Future<void> markAsRead(String chatId, String userId) async {
+  Future<void> markMessagesAsRead(String chatId, String userId) async {
+    try {
+      await _firestore
+          .collection('chats')
+          .doc(chatId)
+          .update({'unread_$userId': 0});
+          
+      final unreadMsgs = await _firestore
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .where('receiverId', isEqualTo: userId)
+          .where('isRead', isEqualTo: false)
+          .get();
+          
+      final batch = _firestore.batch();
+      for (var doc in unreadMsgs.docs) {
+        batch.update(doc.reference, {'isRead': true});
+      }
+      await batch.commit();
+    } catch (e) {
+      debugPrint('Error marking messages as read: $e');
+    }
+  }
+
+  Future<void> updateTypingStatus(
+    String chatId,
+    String userId,
+    bool isTyping,
+  ) async {
     await _firestore
         .collection('chats')
         .doc(chatId)
-        .update({'unread_$userId': 0});
+        .update({'typing_$userId': isTyping});
+  }
+
+  Stream<bool> getFriendTypingStatus(String chatId, String friendId) {
+    return _firestore
+        .collection('chats')
+        .doc(chatId)
+        .snapshots()
+        .map((doc) => doc.data()?['typing_$friendId'] ?? false);
   }
 
   Stream<int> getTotalUnreadCount(String userId) {

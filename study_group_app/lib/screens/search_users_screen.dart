@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../models/user_model.dart';
 import '../services/database_service.dart';
 import '../widgets/user_tile.dart';
@@ -40,8 +39,9 @@ class _SearchUsersScreenState extends State<SearchUsersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Find Study Buddies'),
+        title: const Text('Find Study Buddies', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF6C63FF),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
         children: [

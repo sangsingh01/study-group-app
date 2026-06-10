@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 import '../providers/profile_provider.dart';
-import 'home_screen.dart';
+import 'auth_wrapper.dart'; 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -57,8 +57,9 @@ class _LoginScreenState extends State<LoginScreen>
       if (user != null && mounted) {
         await _databaseService.createUserProfile(user);
         await profileProvider.initialize(user);
+        
         navigator.pushReplacement(
-          MaterialPageRoute(builder: (context) => HomeScreen(user: user)),
+          MaterialPageRoute(builder: (context) => const AuthWrapper()),
         );
       }
     } catch (e) {
@@ -138,19 +139,17 @@ class _LoginScreenState extends State<LoginScreen>
                               width: double.infinity,
                               padding: const EdgeInsets.all(26.0),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.92),
+                                color: Colors.white.withValues(alpha: 0.92),
                                 borderRadius: BorderRadius.circular(30),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.indigo.shade100.withOpacity(
-                                      0.35,
-                                    ),
+                                    color: Colors.indigo.shade100.withValues(alpha: 0.35),
                                     blurRadius: 28,
                                     offset: const Offset(0, 14),
                                   ),
                                 ],
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.85),
+                                  color: Colors.white.withValues(alpha: 0.85),
                                 ),
                               ),
                               child: Column(
@@ -177,9 +176,7 @@ class _LoginScreenState extends State<LoginScreen>
                                           width: 1.5,
                                         ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            22,
-                                          ),
+                                          borderRadius: BorderRadius.circular(22),
                                         ),
                                         backgroundColor: Colors.white,
                                         elevation: 0,

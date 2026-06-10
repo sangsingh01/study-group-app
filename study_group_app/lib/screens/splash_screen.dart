@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'login_screen.dart';
+import 'auth_wrapper.dart'; // FIXED: Changed import from login_screen.dart to your persistence router
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -40,15 +40,17 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
     )..repeat();
 
-    navigateToLogin();
+    // Trigger the persistence verification route flow
+    navigateToAuthWrapper();
   }
 
-  Future<void> navigateToLogin() async {
+  // FIXED: Renamed method from navigateToLogin to route context safely through AuthWrapper
+  Future<void> navigateToAuthWrapper() async {
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(builder: (context) => const AuthWrapper()),
       );
     }
   }

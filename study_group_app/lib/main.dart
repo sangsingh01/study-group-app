@@ -3,9 +3,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'providers/profile_provider.dart';
-import 'screens/splash_screen.dart';
 import 'theme.dart';
 import 'services/database_service.dart';
+
+// Imported your splash screen as the startup point
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +33,8 @@ class MyApp extends StatelessWidget {
       title: 'Study Group App',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme(),
-      home: const SplashScreen(),
+      // The app boots up into the splash screen animation, which then forwards to AuthWrapper
+      home: const SplashScreen(), 
     );
   }
 }

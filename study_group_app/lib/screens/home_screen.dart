@@ -12,9 +12,9 @@ import '../screens/groups_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/search_users_screen.dart';
 import '../services/database_service.dart';
-import 'gamified_home_skeleton.dart';
-import 'chat_screen.dart';
+import 'chats_screen.dart'; 
 import 'study_screen.dart';
+import 'friend_requests_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User user;
@@ -41,6 +41,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _navigateToRequests(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FriendRequestsScreen(
+          currentUid: widget.user.uid,
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -50,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
         listen: false,
       ).initialize(widget.user);
     });
+    _databaseService.setUserActive(widget.user.uid, true);
   }
 
   @override
@@ -72,15 +84,83 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Scaffold(
           backgroundColor: const Color(0xFFF8F9FE),
+          appBar: AppBar(
+            title: Text(
+              'StudyGroup',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+            backgroundColor: const Color(0xFF6C63FF),
+            elevation: 0,
+            actions: [
+              StreamBuilder<AppUser?>(
+                stream: _databaseService.userStream(widget.user.uid),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || snapshot.data == null) {
+                    return IconButton(
+                      icon: const Icon(Icons.notifications_none, color: Colors.white),
+                      onPressed: () => _navigateToRequests(context),
+                    );
+                  }
+
+                  final userProfile = snapshot.data!;
+                  final int requestCount = userProfile.friendRequests.length;
+
+                  if (requestCount == 0) {
+                    return IconButton(
+                      icon: const Icon(Icons.notifications_none, color: Colors.white),
+                      onPressed: () => _navigateToRequests(context),
+                    );
+                  }
+
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications, color: Colors.white),
+                        onPressed: () => _navigateToRequests(context),
+                      ),
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '$requestCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
           body: IndexedStack(
             index: _selectedIndex,
             children: [
-              // Use the gamified UI skeleton as the visual-first Home tab
-              GamifiedHomeSkeleton(currentUser: currentUser, user: widget.user),
+              _buildHomeTab(currentUser), 
               GroupsScreen(currentUser: currentUser, user: widget.user),
-              // Chat tab
-              ChatScreen(currentUser: currentUser, user: widget.user),
-              // Study tab
+              ChatsScreen(user: widget.user, currentUser: currentUser),
               const StudyScreen(),
               ProfileScreen(currentUser: currentUser),
             ],
@@ -109,12 +189,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCustomBottomNav(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final primary = colorScheme.primary;
-    final slateGray = colorScheme.onBackground.withAlpha(153);
+    final slateGray = colorScheme.onSurface.withValues(alpha: 0.6);
 
-    return StreamBuilder<int>(
-      stream: _databaseService.getTotalUnreadCount(widget.user.uid),
-      builder: (context, unreadSnapshot) {
-        final unreadCount = unreadSnapshot.data ?? 0;
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _databaseService.getChatList(widget.user.uid),
+      builder: (context, snapshot) {
+        int unreadCount = 0;
+        if (snapshot.hasData) {
+          for (var chat in snapshot.data!) {
+            unreadCount += (chat['unread_${widget.user.uid}'] ?? 0) as int;
+          }
+        }
 
         return Container(
           height: 84,
@@ -128,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
             border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(6),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 18,
                 offset: const Offset(0, -6),
               ),
@@ -136,42 +221,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: Row(
             children: [
-              _navItem(
-                icon: Icons.home_rounded,
-                label: 'Home',
-                index: 0,
-                activeColor: primary,
-                inactiveColor: slateGray,
-              ),
-              _navItem(
-                icon: Icons.group_rounded,
-                label: 'Groups',
-                index: 1,
-                activeColor: primary,
-                inactiveColor: slateGray,
-              ),
-              _navItem(
-                icon: Icons.chat_bubble_rounded,
-                label: 'Chat',
-                index: 2,
-                activeColor: primary,
-                inactiveColor: slateGray,
-                badgeCount: unreadCount,
-              ),
-              _navItem(
-                icon: Icons.menu_book_rounded,
-                label: 'Study',
-                index: 3,
-                activeColor: primary,
-                inactiveColor: slateGray,
-              ),
-              _navItem(
-                icon: Icons.person_rounded,
-                label: 'Profile',
-                index: 4,
-                activeColor: primary,
-                inactiveColor: slateGray,
-              ),
+              _navItem(icon: Icons.home_rounded, label: 'Home', index: 0, activeColor: primary, inactiveColor: slateGray),
+              _navItem(icon: Icons.group_rounded, label: 'Groups', index: 1, activeColor: primary, inactiveColor: slateGray),
+              _navItem(icon: Icons.chat_bubble_rounded, label: 'Chat', index: 2, activeColor: primary, inactiveColor: slateGray, badgeCount: unreadCount),
+              _navItem(icon: Icons.menu_book_rounded, label: 'Study', index: 3, activeColor: primary, inactiveColor: slateGray),
+              _navItem(icon: Icons.person_rounded, label: 'Profile', index: 4, activeColor: primary, inactiveColor: slateGray),
             ],
           ),
         );
@@ -194,42 +248,46 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: () => _onTabSelected(index),
         child: Stack(
           alignment: Alignment.topRight,
+          clipBehavior: Clip.none,
           children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: color, size: 24),
-                const SizedBox(height: 6),
-                Text(
-                  label,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: color,
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, color: color, size: 24),
+                  const SizedBox(height: 6),
+                  Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             if (badgeCount != null && badgeCount > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                constraints: const BoxConstraints(minWidth: 20),
-                child: Text(
-                  badgeCount > 99 ? '99+' : badgeCount.toString(),
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+              Positioned(
+                right: 12,
+                top: -2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  textAlign: TextAlign.center,
+                  constraints: const BoxConstraints(minWidth: 20),
+                  child: Text(
+                    badgeCount > 99 ? '99+' : badgeCount.toString(),
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
           ],
@@ -249,16 +307,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return RefreshIndicator(
           onRefresh: () async {
-            if (currentUser != null)
+            if (currentUser != null) {
               await _databaseService.getMyGroups(currentUser.uid).first;
+            }
           },
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: 18),
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 400),
+                child: Container(
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFF6C63FF), Color(0xFF8E7DFF)],
@@ -268,7 +326,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha(35),
+                        color: Colors.black.withValues(alpha: 0.15),
                         blurRadius: 24,
                         offset: const Offset(0, 16),
                       ),
@@ -297,7 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   'Your study space is ready.',
                                   style: GoogleFonts.poppins(
                                     fontSize: 14,
-                                    color: Colors.white.withAlpha(220),
+                                    color: Colors.white.withValues(alpha: 0.85),
                                   ),
                                 ),
                               ],
@@ -305,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           CircleAvatar(
                             radius: 26,
-                            backgroundColor: Colors.white.withAlpha(61),
+                            backgroundColor: Colors.white.withValues(alpha: 0.24),
                             child: const Icon(
                               Icons.waving_hand_rounded,
                               color: Colors.white,
@@ -348,8 +406,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) =>
-                                SearchUsersScreen(currentUid: widget.user.uid),
+                            builder: (_) => SearchUsersScreen(currentUid: widget.user.uid),
                           ),
                         );
                       },
@@ -359,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: Icons.person_rounded,
                       label: 'My Profile',
                       color: const Color(0xFF4C8DFF),
-                      onTap: () => setState(() => _selectedIndex = 3),
+                      onTap: () => setState(() => _selectedIndex = 4),
                     ),
                   ],
                 ),
@@ -372,21 +429,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: Text(
                         'My Groups',
-                        style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700),
                       ),
                     ),
                     TextButton(
                       onPressed: () => setState(() => _selectedIndex = 1),
                       child: Text(
                         'See All',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: const Color(0xFF6C63FF),
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF6C63FF), fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
@@ -403,7 +453,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withAlpha(12),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 24,
                           offset: const Offset(0, 12),
                         ),
@@ -412,21 +462,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'No groups yet',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                        Text('No groups yet', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 12),
                         Text(
                           'Join a group to start collaborating with classmates.',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: const Color(0xFF6B7280),
-                            height: 1.5,
-                          ),
+                          style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF6B7280), height: 1.5),
                         ),
                         const SizedBox(height: 20),
                         SizedBox(
@@ -436,16 +476,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF6C63FF),
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24),
-                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                             ),
                             child: Text(
                               'Find a Group',
-                              style: GoogleFonts.poppins(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
                             ),
                           ),
                         ),
@@ -466,104 +501,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               const SizedBox(height: 26),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'Recent Activity',
-                  style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    if (myGroups.isEmpty)
-                      Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(22),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withAlpha(10),
-                              blurRadius: 18,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Recent Activity',
-                              style: GoogleFonts.poppins(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'No activity yet. Join a group to start collaborating with your study buddies.',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                color: const Color(0xFF6B7280),
-                                height: 1.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      ...myGroups.take(3).map((group) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(22),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(10),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            padding: const EdgeInsets.all(18),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'You joined ${group.name}',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Stay active in the group to keep your study streak going.',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 13,
-                                    color: const Color(0xFF6B7280),
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 28),
             ],
           ),
         );
@@ -590,7 +527,7 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(10),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 18,
                 offset: const Offset(0, 10),
               ),
@@ -601,23 +538,14 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(16)),
                 child: Icon(icon, color: Colors.white, size: 22),
               ),
               const SizedBox(height: 10),
               Text(
                 label,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF1A1A2E),
-                ),
+                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1A1A2E)),
                 textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -627,138 +555,43 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCompactGroupCard(GroupModel group, AppUser? currentUser) {
-    final bool isMember =
-        currentUser != null && group.members.contains(currentUser.uid);
-    final gradients = [
-      const [Color(0xFF6C63FF), Color(0xFF8D6CFF)],
-      const [Color(0xFF43E97B), Color(0xFF38D39F)],
-      const [Color(0xFFFF6584), Color(0xFFFFA5B4)],
-      const [Color(0xFF4C8DFF), Color(0xFF63E8FF)],
-    ];
-    final colors = gradients[group.name.length % gradients.length];
-
+    final bool isMember = currentUser != null && group.members.contains(currentUser.uid);
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: colors.last.withAlpha(70),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 24,
-            offset: const Offset(0, 16),
+            offset: const Offset(0, 12),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(24),
-          onTap: currentUser == null
-              ? null
-              : () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => GroupDetailsScreen(
-                        group: group,
-                        currentUser: currentUser,
-                      ),
-                    ),
-                  );
-                },
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(group.name, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 16),
+            Row(
               children: [
-                Text(
-                  group.name,
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                Expanded(
+                  child: Text('${group.members.length} members', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
                 ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.22),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    group.subject.toUpperCase(),
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  group.description,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: Colors.white.withOpacity(0.95),
-                    height: 1.5,
-                  ),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${group.members.length} members',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ),
-                    ElevatedButton(
-                      onPressed: currentUser == null || isMember
-                          ? null
-                          : () async {
-                              await _databaseService.joinGroup(
-                                group.id,
-                                widget.user.uid,
-                              );
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: colors.last,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      child: Text(
-                        isMember ? 'Joined' : 'Join',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
+                ElevatedButton(
+                  onPressed: currentUser == null || isMember
+                      ? null
+                      : () async {
+                          await _databaseService.joinGroup(group.id, widget.user.uid);
+                        },
+                  child: Text(isMember ? 'Joined' : 'Join'),
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
