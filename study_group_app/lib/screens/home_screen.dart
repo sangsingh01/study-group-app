@@ -1,19 +1,21 @@
-import 'package:flutter/material.dart';
+// lib/screens/home_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
+import '../constants/design_system.dart';
 import '../models/group_model.dart';
 import '../models/user_model.dart';
-import '../providers/profile_provider.dart';
+import '../screens/ai_assistant_screen.dart';
 import '../screens/create_group_screen.dart';
 import '../screens/groups_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/search_users_screen.dart';
 import '../services/database_service.dart';
-import 'chats_screen.dart'; 
-import 'study_screen.dart';
+import 'chats_screen.dart';
 import 'friend_requests_screen.dart';
+import 'study_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User user;
@@ -26,13 +28,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final DatabaseService _databaseService = DatabaseService();
   int _selectedIndex = 0;
-
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
-  }
 
   void _onTabSelected(int index) {
     setState(() {
@@ -54,12 +49,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ProfileProvider>(
-        context,
-        listen: false,
-      ).initialize(widget.user);
-    });
     _databaseService.setUserActive(widget.user.uid, true);
   }
 
@@ -69,99 +58,75 @@ class _HomeScreenState extends State<HomeScreen> {
       stream: _databaseService.userStream(widget.user.uid),
       builder: (context, userSnapshot) {
         final currentUser = userSnapshot.data;
-        final colorScheme = Theme.of(context).colorScheme;
 
-        if (userSnapshot.connectionState == ConnectionState.waiting &&
-            currentUser == null) {
-          return Scaffold(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        if (userSnapshot.connectionState == ConnectionState.waiting && currentUser == null) {
+          return const Scaffold(
+            backgroundColor: CipherColors.background,
             body: Center(
-              child: CircularProgressIndicator(color: colorScheme.primary),
+              child: CircularProgressIndicator(color: CipherColors.primary),
             ),
           );
         }
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF8F9FE),
+          backgroundColor: CipherColors.background,
           appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            scrolledUnderElevation: 0,
             title: Text(
-              'StudyGroup',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+              'Cipher',
+              style: CipherTextStyles.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: CipherColors.primary,
               ),
             ),
-            backgroundColor: const Color(0xFF6C63FF),
-            elevation: 0,
             actions: [
               StreamBuilder<AppUser?>(
                 stream: _databaseService.userStream(widget.user.uid),
                 builder: (context, snapshot) {
-                  if (!snapshot.hasData || snapshot.data == null) {
-                    return IconButton(
-                      icon: const Icon(Icons.notifications_none, color: Colors.white),
-                      onPressed: () => _navigateToRequests(context),
-                    );
-                  }
-
-                  final userProfile = snapshot.data!;
-                  final int requestCount = userProfile.friendRequests.length;
-
-                  if (requestCount == 0) {
-                    return IconButton(
-                      icon: const Icon(Icons.notifications_none, color: Colors.white),
-                      onPressed: () => _navigateToRequests(context),
-                    );
-                  }
+                  final userProfile = snapshot.data;
+                  final int requestCount = userProfile?.friendRequests.length ?? 0;
 
                   return Stack(
                     alignment: Alignment.center,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.notifications, color: Colors.white),
+                        icon: Icon(
+                          requestCount > 0 ? Icons.notifications_rounded : Icons.notifications_none_rounded,
+                          color: CipherColors.primary,
+                          size: 26,
+                        ),
                         onPressed: () => _navigateToRequests(context),
                       ),
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          child: Center(
-                            child: Text(
-                              '$requestCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
+                      if (requestCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
                             ),
                           ),
                         ),
-                      ),
                     ],
                   );
                 },
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
             ],
           ),
           body: IndexedStack(
             index: _selectedIndex,
             children: [
-              _buildHomeTab(currentUser), 
+              _buildHomeTab(currentUser),
               GroupsScreen(currentUser: currentUser, user: widget.user),
               ChatsScreen(user: widget.user, currentUser: currentUser),
-              // 🌟 FIXED: Used ?. to handle null safely, falling back to an empty string if null
-              StudyScreen(currentUid: currentUser?.uid ?? ''), 
+              StudyScreen(currentUid: currentUser?.uid ?? ''),
               ProfileScreen(currentUser: currentUser),
             ],
           ),
@@ -171,13 +136,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            CreateGroupScreen(user: widget.user),
+                        builder: (context) => CreateGroupScreen(user: widget.user),
                       ),
                     );
                   },
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Create Group'),
+                  backgroundColor: CipherColors.primary,
+                  icon: const Icon(Icons.add_rounded, color: Colors.white),
+                  label: Text(
+                    'Create Group', 
+                    style: CipherTextStyles.poppins(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 )
               : null,
           bottomNavigationBar: _buildCustomBottomNav(context),
@@ -185,11 +153,8 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-  Widget _buildCustomBottomNav(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final primary = colorScheme.primary;
-    final slateGray = colorScheme.onSurface.withValues(alpha: 0.6);
 
+  Widget _buildCustomBottomNav(BuildContext context) {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: _databaseService.getChatList(widget.user.uid),
       builder: (context, snapshot) {
@@ -201,30 +166,21 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         return Container(
-          height: 84,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
+          height: 65,
+          decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
+            border: Border(
+              top: BorderSide(color: CipherColors.border, width: 0.5),
             ),
-            border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 18,
-                offset: const Offset(0, -6),
-              ),
-            ],
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _navItem(icon: Icons.home_rounded, label: 'Home', index: 0, activeColor: primary, inactiveColor: slateGray),
-              _navItem(icon: Icons.group_rounded, label: 'Groups', index: 1, activeColor: primary, inactiveColor: slateGray),
-              _navItem(icon: Icons.chat_bubble_rounded, label: 'Chat', index: 2, activeColor: primary, inactiveColor: slateGray, badgeCount: unreadCount),
-              _navItem(icon: Icons.menu_book_rounded, label: 'Study', index: 3, activeColor: primary, inactiveColor: slateGray),
-              _navItem(icon: Icons.person_rounded, label: 'Profile', index: 4, activeColor: primary, inactiveColor: slateGray),
+              _navItem(iconOutline: Icons.home_outlined, iconFilled: Icons.home_rounded, label: 'Home', index: 0),
+              _navItem(iconOutline: Icons.groups_outlined, iconFilled: Icons.groups_rounded, label: 'Groups', index: 1),
+              _navItem(iconOutline: Icons.chat_bubble_outline_rounded, iconFilled: Icons.chat_bubble_rounded, label: 'Chat', index: 2, badgeCount: unreadCount),
+              _navItem(iconOutline: Icons.menu_book_outlined, iconFilled: Icons.menu_book_rounded, label: 'Study', index: 3),
+              _navItem(iconOutline: Icons.person_outline_rounded, iconFilled: Icons.person_rounded, label: 'Profile', index: 4),
             ],
           ),
         );
@@ -233,56 +189,69 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _navItem({
-    required IconData icon,
+    required IconData iconOutline,
+    required IconData iconFilled,
     required String label,
     required int index,
-    required Color activeColor,
-    required Color inactiveColor,
     int? badgeCount,
   }) {
-    final selected = _selectedIndex == index;
-    final color = selected ? activeColor : inactiveColor;
+    final isSelected = _selectedIndex == index;
+    final activeColor = CipherColors.primary;
+    final inactiveColor = CipherColors.textSecondary;
+
     return Expanded(
-      child: InkWell(
+      child: GestureDetector(
         onTap: () => _onTabSelected(index),
+        behavior: HitTestBehavior.opaque,
         child: Stack(
-          alignment: Alignment.topRight,
+          alignment: Alignment.center,
           clipBehavior: Clip.none,
           children: [
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, color: color, size: 24),
-                  const SizedBox(height: 6),
-                  Text(
-                    label,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: color,
-                    ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 4,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected ? activeColor : Colors.transparent,
                   ),
-                ],
-              ),
+                ),
+                Icon(
+                  isSelected ? iconFilled : iconOutline,
+                  color: isSelected ? activeColor : inactiveColor,
+                  size: 22,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: CipherTextStyles.poppins(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? activeColor : inactiveColor,
+                  ),
+                ),
+              ],
             ),
             if (badgeCount != null && badgeCount > 0)
               Positioned(
-                right: 12,
-                top: -2,
+                right: 16,
+                top: 6,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                   decoration: BoxDecoration(
                     color: Colors.red,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  constraints: const BoxConstraints(minWidth: 20),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                   child: Text(
                     badgeCount > 99 ? '99+' : badgeCount.toString(),
                     style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                     textAlign: TextAlign.center,
@@ -296,300 +265,500 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHomeTab(AppUser? currentUser) {
-    return StreamBuilder<List<GroupModel>>(
-      stream: currentUser != null
-          ? _databaseService.getMyGroups(currentUser.uid)
-          : const Stream.empty(),
-      builder: (context, myGroupsSnapshot) {
-        final myGroups = myGroupsSnapshot.data ?? [];
-        final greeting = _getGreeting();
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            if (currentUser != null) {
-              await _databaseService.getMyGroups(currentUser.uid).first;
-            }
-          },
-          child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF6C63FF), Color(0xFF8E7DFF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 24,
-                        offset: const Offset(0, 16),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '$greeting, ${currentUser?.username.split(' ').first ?? 'Learner'}! 👋',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  'Your study space is ready.',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color: Colors.white.withValues(alpha: 0.85),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          CircleAvatar(
-                            radius: 26,
-                            backgroundColor: Colors.white.withValues(alpha: 0.24),
-                            child: const Icon(
-                              Icons.waving_hand_rounded,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 22),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _buildHomeActionButton(
-                      context: context,
-                      icon: Icons.group_rounded,
-                      label: 'My Groups',
-                      color: const Color(0xFF6C63FF),
-                      onTap: () => setState(() => _selectedIndex = 1),
-                    ),
-                    _buildHomeActionButton(
-                      context: context,
-                      icon: Icons.explore_rounded,
-                      label: 'Find Groups',
-                      color: const Color(0xFF43E97B),
-                      onTap: () => setState(() => _selectedIndex = 1),
-                    ),
-                    _buildHomeActionButton(
-                      context: context,
-                      icon: Icons.person_add_alt_1_rounded,
-                      label: 'Add Friend',
-                      color: const Color(0xFFFF6584),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => SearchUsersScreen(currentUid: widget.user.uid),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildHomeActionButton(
-                      context: context,
-                      icon: Icons.person_rounded,
-                      label: 'My Profile',
-                      color: const Color(0xFF4C8DFF),
-                      onTap: () => setState(() => _selectedIndex = 4),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 26),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'My Groups',
-                        style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => setState(() => _selectedIndex = 1),
-                      child: Text(
-                        'See All',
-                        style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF6C63FF), fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              if (myGroups.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 24,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('No groups yet', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Join a group to start collaborating with classmates.',
-                          style: GoogleFonts.poppins(fontSize: 14, color: const Color(0xFF6B7280), height: 1.5),
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => setState(() => _selectedIndex = 1),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF6C63FF),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                            ),
-                            child: Text(
-                              'Find a Group',
-                              style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    children: myGroups.map((group) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 14),
-                        child: _buildCompactGroupCard(group, currentUser),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              const SizedBox(height: 26),
-            ],
-          ),
-        );
+    return RefreshIndicator(
+      color: CipherColors.primary,
+      onRefresh: () async {
+        if (currentUser != null) {
+          await _databaseService.getMyGroups(currentUser.uid).first;
+        }
       },
-    );
-  }
-
-  Widget _buildHomeActionButton({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    final buttonWidth = (MediaQuery.of(context).size.width - 20 * 2 - 12) / 2;
-    return SizedBox(
-      width: buttonWidth,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(16)),
-                child: Icon(icon, color: Colors.white, size: 22),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                label,
-                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1A1A2E)),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildGreetingBanner(currentUser),
+            const SizedBox(height: 16),
+            _buildStatsRow(currentUser),
+            const SizedBox(height: 16),
+            _buildQuickActions(context),
+            const SizedBox(height: 16),
+            _buildMyGroupsSection(currentUser),
+            const SizedBox(height: 16),
+            _buildTodayTasksSection(),
+            const SizedBox(height: 16),
+            _buildAIAssistantBanner(context),
+            const SizedBox(height: 24),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildCompactGroupCard(GroupModel group, AppUser? currentUser) {
-    final bool isMember = currentUser != null && group.members.contains(currentUser.uid);
+  Widget _buildGreetingBanner(AppUser? currentUser) {
+    final hour = DateTime.now().hour;
+    String greetingTime = 'Good Morning';
+    if (hour >= 12 && hour < 17) greetingTime = 'Good Afternoon';
+    if (hour >= 17) greetingTime = 'Good Evening';
+
     return Container(
       width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: CipherColors.primaryGradient,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
+            color: CipherColors.primary.withValues(alpha: 0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "$greetingTime,",
+                      style: CipherTextStyles.poppins(fontSize: 14, color: Colors.white, alpha: 0.9),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "${currentUser?.username.split(' ').first ?? 'Learner'}! 👋",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: CipherTextStyles.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Your learning dashboard is ready",
+                      style: CipherTextStyles.poppins(fontSize: 13, color: Colors.white, alpha: 0.7),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.24),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(Icons.waving_hand_rounded, color: Colors.white, size: 24),
+                ),
+              ),
+            ],
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12.0),
+            child: Divider(color: Colors.white24, height: 1),
+          ),
+          Row(
+            children: [
+              const Text("🔥", style: TextStyle(fontSize: 14)),
+              const SizedBox(width: 4),
+              Text(
+                "5 day streak",
+                style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text("•", style: CipherTextStyles.poppins(fontSize: 13, color: Colors.white54)),
+              ),
+              const Text("⚡", style: TextStyle(fontSize: 14)),
+              const SizedBox(width: 4),
+              Text(
+                "800 XP",
+                style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white),
+              ),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsRow(AppUser? currentUser) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').doc(widget.user.uid).snapshots(),
+      builder: (context, snapshot) {
+        int groupCount = 0;
+        int friendCount = currentUser?.friends.length ?? 0;
+        int xpCount = 800;
+        String studyTime = "2.1h";
+
+        if (snapshot.hasData && snapshot.data!.exists) {
+          final data = snapshot.data!.data() as Map<String, dynamic>?;
+          groupCount = (data?['groups'] as List?)?.length ?? 0;
+          xpCount = data?['xp'] ?? 800;
+          studyTime = data?['studyTime'] ?? "2.1h";
+        }
+
+        return Row(
+          children: [
+            Expanded(child: _buildStatItem(Icons.groups_rounded, groupCount.toString(), "Groups", CipherColors.primary)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildStatItem(Icons.people_alt_rounded, friendCount.toString(), "Friends", CipherColors.secondary)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildStatItem(Icons.bolt_rounded, xpCount.toString(), "XP", CipherColors.orange)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildStatItem(Icons.access_time_filled_rounded, studyTime, "Today", CipherColors.blue)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStatItem(IconData icon, String value, String label, Color accentColor) {
+    return Container(
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          )
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: accentColor, size: 20),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: CipherTextStyles.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: accentColor),
+          ),
+          Text(
+            label,
+            style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    final itemWidth = (MediaQuery.of(context).size.width - 32 - 12) / 2;
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        _buildCompactActionCard(Icons.grid_view_rounded, "My Groups", CipherColors.primaryLight, CipherColors.primary, itemWidth, () => setState(() => _selectedIndex = 1)),
+        _buildCompactActionCard(Icons.search_rounded, "Find Groups", CipherColors.secondaryLight, CipherColors.secondary, itemWidth, () => setState(() => _selectedIndex = 1)),
+        _buildCompactActionCard(Icons.person_add_alt_1_rounded, "Add Friend", CipherColors.pinkLight, CipherColors.pink, itemWidth, () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => SearchUsersScreen(currentUid: widget.user.uid)));
+        }),
+        _buildCompactActionCard(Icons.account_circle_rounded, "My Profile", CipherColors.blueLight, CipherColors.blue, itemWidth, () => setState(() => _selectedIndex = 4)),
+      ],
+    );
+  }
+
+  Widget _buildCompactActionCard(IconData icon, String label, Color bg, Color tint, double width, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: width,
+        height: 54,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: Colors.black12.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))
+          ],
+        ),
+        child: Row(
           children: [
-            Text(group.name, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 16),
-            Row(
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: bg,
+              child: Icon(icon, color: tint, size: 16),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: CipherColors.textPrimary),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMyGroupsSection(AppUser? currentUser) {
+    const List<LinearGradient> gradients = [
+      CipherColors.primaryGradient,
+      CipherColors.secondaryGradient,
+      CipherColors.pinkGradient,
+      CipherColors.blueGradient,
+    ];
+
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text("My Groups", style: CipherTextStyles.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
+            GestureDetector(
+              onTap: () => setState(() => _selectedIndex = 1),
+              child: Text("See All", style: CipherTextStyles.poppins(fontSize: 13, color: CipherColors.primary, fontWeight: FontWeight.w600)),
+            )
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 120,
+          child: StreamBuilder<List<GroupModel>>(
+            stream: currentUser != null ? _databaseService.getMyGroups(currentUser.uid) : const Stream.empty(),
+            builder: (context, snapshot) {
+              final myGroups = snapshot.data ?? [];
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(color: CipherColors.primary));
+              }
+              if (myGroups.isEmpty) {
+                return _buildEmptyGroupsState();
+              }
+
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: myGroups.length,
+                itemBuilder: (context, index) {
+                  final group = myGroups[index];
+                  final gradient = gradients[index % gradients.length];
+
+                  return Container(
+                    width: 200,
+                    margin: const EdgeInsets.only(right: 12),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: gradient,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              group.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: CipherTextStyles.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                "Subject Group",
+                                style: CipherTextStyles.poppins(fontSize: 10, color: Colors.white),
+                              ),
+                            )
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "${group.members.length} members",
+                              style: CipherTextStyles.poppins(fontSize: 12, color: Colors.white70),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                              child: Text(
+                                "Active",
+                                style: CipherTextStyles.poppins(fontSize: 10, color: CipherColors.primary, fontWeight: FontWeight.bold),
+                              ),
+                            )
+                          ],
+                        )
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget _buildEmptyGroupsState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text('${group.members.length} members', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-                ),
-                ElevatedButton(
-                  onPressed: currentUser == null || isMember
-                      ? null
-                      : () async {
-                          await _databaseService.joinGroup(group.id, widget.user.uid);
-                        },
-                  child: Text(isMember ? 'Joined' : 'Join'),
-                ),
+                Text("No groups yet", style: CipherTextStyles.poppins(fontSize: 14, fontWeight: FontWeight.bold)),
+                Text("Create or join a group", style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary)),
               ],
             ),
+          ),
+          ElevatedButton(
+            onPressed: () => setState(() => _selectedIndex = 1),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: CipherColors.primary,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text("Get Started", style: CipherTextStyles.poppins(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTodayTasksSection() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Text("Today's Tasks", style: CipherTextStyles.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: CipherColors.primaryLight, borderRadius: BorderRadius.circular(10)),
+                  child: Text("3", style: CipherTextStyles.poppins(fontSize: 11, fontWeight: FontWeight.bold, color: CipherColors.primary)),
+                )
+              ],
+            ),
+            GestureDetector(
+              onTap: () => setState(() => _selectedIndex = 3),
+              child: Text("See All", style: CipherTextStyles.poppins(fontSize: 13, color: CipherColors.primary, fontWeight: FontWeight.w600)),
+            )
+          ],
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('tasks').limit(3).snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                child: Column(
+                  children: [
+                    Text("No tasks today 🎉", style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: CipherColors.textSecondary)),
+                    Text("You are all caught up!", style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary)),
+                  ],
+                ),
+              );
+            }
+
+            final tasks = snapshot.data!.docs;
+            return ListView.builder(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: tasks.length,
+              itemBuilder: (context, idx) {
+                final data = tasks[idx].data() as Map<String, dynamic>;
+                final title = data['title'] ?? 'Review lecture notes';
+                final groupName = data['groupName'] ?? 'General Space';
+                final priority = data['priority'] ?? 'medium';
+
+                Color dotColor = Colors.green;
+                if (priority == 'high') dotColor = Colors.red;
+                if (priority == 'medium') dotColor = Colors.amber;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                  child: Row(
+                    children: [
+                      Container(width: 8, height: 8, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.bold)),
+                            Text(groupName, style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      Text("5:00 PM", style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary)),
+                      const SizedBox(width: 12),
+                      const Icon(Icons.radio_button_unchecked_rounded, color: CipherColors.border, size: 20)
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        )
+      ],
+    );
+  }
+
+  Widget _buildAIAssistantBanner(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        // 🌟 FIXED: Passed the required 'currentUid' named parameter to constructor
+        Navigator.push(
+          context, 
+          MaterialPageRoute(
+            builder: (context) => AiAssistantScreen(currentUid: widget.user.uid),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: CipherColors.orangeGradient,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 28),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Ask AI Study Assistant", style: CipherTextStyles.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text("Get instant help with your studies", style: CipherTextStyles.poppins(fontSize: 11, color: Colors.white70)),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16)
           ],
         ),
       ),
