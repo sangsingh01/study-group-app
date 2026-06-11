@@ -257,7 +257,7 @@ class _GamifiedHomeSkeletonState extends State<GamifiedHomeSkeleton> {
                         color: Colors.white,
                         size: 18,
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(height: 20),
                       Text(
                         '14',
                         style: TextStyle(

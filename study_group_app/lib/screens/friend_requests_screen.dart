@@ -148,8 +148,12 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                 itemCount: requests.length,
                 itemBuilder: (context, index) {
                   final requester = requests[index];
-                  final bool isAccepted = _acceptedIds.contains(requester.uid);
-                  final bool isRowLoading = _processingIds[requester.uid] == true;
+                  
+                  // Safe Verification: Fallback directly onto the source list index if model field is empty
+                  final String secureRequesterUid = requester.uid.isEmpty ? displayUids[index] : requester.uid;
+                  
+                  final bool isAccepted = _acceptedIds.contains(secureRequesterUid);
+                  final bool isRowLoading = _processingIds[secureRequesterUid] == true;
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
@@ -244,7 +248,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        onPressed: () => _decline(requester.uid),
+                                        onPressed: () => _decline(secureRequesterUid),
                                         icon: const Icon(Icons.close_rounded, color: Color(0xFFFF6584)),
                                         style: IconButton.styleFrom(
                                           backgroundColor: const Color(0xFFFF6584).withValues(alpha: 0.1),
@@ -252,7 +256,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                                       ),
                                       const SizedBox(width: 8),
                                       IconButton(
-                                        onPressed: () => _accept(requester.uid),
+                                        onPressed: () => _accept(secureRequesterUid),
                                         icon: const Icon(Icons.check_rounded, color: Color(0xFF43E97B)),
                                         style: IconButton.styleFrom(
                                           backgroundColor: const Color(0xFF43E97B).withValues(alpha: 0.1),

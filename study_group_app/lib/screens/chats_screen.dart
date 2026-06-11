@@ -111,7 +111,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                             'Private chats with friends',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
-                              color: Colors.white.withOpacity(0.8),
+                       color: Colors.black.withValues(alpha: 0.1),
                             ),
                           ),
                         ],

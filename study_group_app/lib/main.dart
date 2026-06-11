@@ -1,3 +1,4 @@
+// main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +9,9 @@ import 'services/database_service.dart';
 
 // Imported your splash screen as the startup point
 import 'screens/splash_screen.dart';
+
+// 🌟 FIX 3: Declared the global key to manage background context navigation routing
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +36,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Study Group App',
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey, // 🌟 FIX 3: Registered global key with MaterialApp
       theme: AppTheme.lightTheme(),
       // The app boots up into the splash screen animation, which then forwards to AuthWrapper
       home: const SplashScreen(), 

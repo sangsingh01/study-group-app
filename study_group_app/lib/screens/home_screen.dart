@@ -7,7 +7,6 @@ import '../models/group_model.dart';
 import '../models/user_model.dart';
 import '../providers/profile_provider.dart';
 import '../screens/create_group_screen.dart';
-import '../screens/group_details_screen.dart';
 import '../screens/groups_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/search_users_screen.dart';
@@ -161,7 +160,8 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildHomeTab(currentUser), 
               GroupsScreen(currentUser: currentUser, user: widget.user),
               ChatsScreen(user: widget.user, currentUser: currentUser),
-              const StudyScreen(),
+              // 🌟 FIXED: Used ?. to handle null safely, falling back to an empty string if null
+              StudyScreen(currentUid: currentUser?.uid ?? ''), 
               ProfileScreen(currentUser: currentUser),
             ],
           ),
@@ -185,7 +185,6 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-
   Widget _buildCustomBottomNav(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final primary = colorScheme.primary;

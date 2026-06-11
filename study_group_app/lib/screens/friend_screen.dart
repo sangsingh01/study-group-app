@@ -84,7 +84,7 @@ class _FriendScreenState extends State<FriendScreen> {
       children: [
         CircleAvatar(
           radius: 26,
-          backgroundColor: const Color(0xFF6C63FF).withOpacity(0.18),
+          backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.18),
           foregroundImage: member.profileImage != null ? NetworkImage(member.profileImage!) : null,
           child: member.profileImage == null
               ? Text(
@@ -209,7 +209,7 @@ class _FriendScreenState extends State<FriendScreen> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(22),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 16, offset: const Offset(0, 10))],
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 16, offset: const Offset(0, 10))],
                               ),
                               child: Row(
                                 children: [
@@ -245,7 +245,7 @@ class _FriendScreenState extends State<FriendScreen> {
                                           children: [
                                             CircleAvatar(
                                               radius: 26,
-                                              backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
+                                              backgroundColor: const Color(0xFF6C63FF).withValues(alpha: 0.1),
                                               foregroundImage: requester.profileImage != null ? NetworkImage(requester.profileImage!) : null,
                                               child: requester.profileImage == null
                                                   ? Text(

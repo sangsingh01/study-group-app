@@ -23,23 +23,40 @@ class DatabaseService {
     final uid = authUser.uid;
     final userDoc = _firestore.collection('users').doc(uid);
     final snapshot = await userDoc.get();
-    if (snapshot.exists) return;
-
+    
     final email = authUser.email ?? '';
-    final username = await _generateUniqueUsername(
-      authUser.displayName?.split(' ').first ?? email.split('@').first,
-    );
+    
+    // 1. Safe Extraction: If display name is null or empty, split the email prefix cleanly
+    String rawName = authUser.displayName ?? '';
+    if (rawName.isEmpty && email.isNotEmpty) {
+      rawName = email.split('@').first;
+    }
+    if (rawName.isEmpty) {
+      rawName = "Student"; // Bulletproof baseline fallback
+    }
 
-    await userDoc.set(
-      AppUser(
-        uid: uid,
-        username: username,
-        email: email,
-        profileImage: authUser.photoURL,
-        isActive: true,
-        lastSeen: DateTime.now(),
-      ).toMap(),
-    );
+    // 2. Generate the unique username string safely
+    final username = await _generateUniqueUsername(rawName.split(' ').first);
+
+    // 3. Extract existing lists if the user document already exists to prevent wiping them out
+    Map<String, dynamic> existingData = snapshot.exists ? (snapshot.data() ?? {}) : {};
+    List friendsList = existingData['friends'] ?? [];
+    List friendRequestsList = existingData['friendRequests'] ?? [];
+    List sentRequestsList = existingData['sentRequests'] ?? [];
+
+    // 4. Safe Write: We add explicit data maps to guarantee the UI never reads a null value
+    await userDoc.set({
+      'uid': uid,
+      'username': username,
+      'name': rawName, // 🌟 CRITICAL FIX: Explicitly map 'name' for UI card visibility
+      'email': email,
+      'profileImage': authUser.photoURL,
+      'isActive': true,
+      'lastSeen': Timestamp.fromDate(DateTime.now()),
+      'friends': friendsList,
+      'friendRequests': friendRequestsList,
+      'sentRequests': sentRequestsList,
+    }, SetOptions(merge: true)); // 🌟 CRITICAL FIX: Merge prevent wipes during app re-auth runs
   }
 
   Future<String> _generateUniqueUsername(String rawName) async {
@@ -63,7 +80,6 @@ class DatabaseService {
       suffix += 1;
     }
   }
-
   Stream<AppUser?> userStream(String uid) {
     return _firestore.collection('users').doc(uid).snapshots().map((snapshot) {
       if (!snapshot.exists || snapshot.data() == null) return null;
@@ -103,7 +119,6 @@ class DatabaseService {
     for (final chunk in chunks) {
       final query = await _firestore
           .collection('users')
-          // Using FieldPath.documentId targets the actual document name/ID key directly
           .where(FieldPath.documentId, whereIn: chunk)
           .get();
       results.addAll(query.docs.map((doc) => AppUser.fromMap(doc.data())));
@@ -116,11 +131,10 @@ class DatabaseService {
       return Stream<List<AppUser>>.value([]);
     }
 
-    // Branch 1: If 10 or fewer UIDs, handle it in a single quick stream subscription
     if (uids.length <= 10) {
       return _firestore
           .collection('users')
-          .where(FieldPath.documentId, whereIn: uids) // Fixed here
+          .where(FieldPath.documentId, whereIn: uids)
           .snapshots()
           .map(
             (snapshot) => snapshot.docs
@@ -129,7 +143,6 @@ class DatabaseService {
           );
     }
 
-    // Branch 2: If more than 10 UIDs, merge multiple chunked stream listeners safely
     final controller = StreamController<List<AppUser>>.broadcast();
     final subs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
     final cache = <String, AppUser>{};
@@ -141,7 +154,7 @@ class DatabaseService {
     for (final chunk in _chunkList(uids, 10)) {
       final stream = _firestore
           .collection('users')
-          .where(FieldPath.documentId, whereIn: chunk) // Fixed here
+          .where(FieldPath.documentId, whereIn: chunk)
           .snapshots();
       final subscription = stream.listen((snapshot) {
         for (final doc in snapshot.docs) {
@@ -161,6 +174,7 @@ class DatabaseService {
 
     return controller.stream;
   }
+
   List<List<T>> _chunkList<T>(List<T> list, int chunkSize) {
     final chunks = <List<T>>[];
     for (var i = 0; i < list.length; i += chunkSize) {
@@ -211,30 +225,26 @@ class DatabaseService {
       final fromData = fromSnapshot.data() ?? {};
       final toData = toSnapshot.data() ?? {};
 
-      // Pull current social states for validation rules
       final List myFriends = fromData['friends'] ?? [];
       final List mySentRequests = fromData['sentRequests'] ?? [];
       final List receiverIncomingRequests = toData['friendRequests'] ?? [];
 
-      // Safe Check: Don't send if they are already friends, or if a request is already in transit
       if (myFriends.contains(toUid) || 
           mySentRequests.contains(toUid) || 
           receiverIncomingRequests.contains(fromUid)) {
-        return; // Already sent or connected, exit safely.
+        return; 
       }
 
-      // 1. Deliver the request directly into the RECEIVER's incoming requests array list
       transaction.update(toRef, {
         'friendRequests': FieldValue.arrayUnion([fromUid]),
       });
 
-      // 2. Track the request inside the SENDER's outgoing data records
       transaction.update(fromRef, {
         'sentRequests': FieldValue.arrayUnion([toUid]),
       });
     });
   }
-  // --- SPLIT TRANSACTION: HANDSHAKE AND CHAT ISOLATION ---
+
   Future<void> acceptFriendRequest(
     String currentUid,
     String requesterUid,
@@ -245,7 +255,6 @@ class DatabaseService {
     final chatId = getChatId(currentUid, requesterUid);
     final chatRef = _firestore.collection('chats').doc(chatId);
 
-    // STEP 1: Update both user documents within the transactional window
     await _firestore.runTransaction((transaction) async {
       final currentSnapshot = await transaction.get(currentRef);
       final requesterSnapshot = await transaction.get(requesterRef);
@@ -261,7 +270,6 @@ class DatabaseService {
       });
     });
 
-    // STEP 2: Create chat document separately OUTSIDE the user transaction scope
     await chatRef.set({
       'chatId': chatId,
       'lastMessage': 'You are now connected! Start chatting 👋',
@@ -275,7 +283,6 @@ class DatabaseService {
     }, SetOptions(merge: true));
   }
 
-  // --- REPAIRED DECLINE TRANSACTION ---
   Future<void> declineFriendRequest(
     String currentUid,
     String requesterUid,
@@ -671,4 +678,39 @@ class DatabaseService {
       'memberRoles.$userId': FieldValue.delete(),
     });
   }
-}      
+
+  // =========================================================================
+  // 🚀 CIPHER FRIEND SYSTEM COMPILER FIXES (CORRECTLY NESTED INSIDE CLASS)
+  // =========================================================================
+
+  Stream<List<AppUser>> cipherUsersByIdsStream(List<String> uids) {
+    if (uids.isEmpty) return Stream.value([]);
+    return _firestore
+        .collection('users')
+        .where(FieldPath.documentId, whereIn: uids)
+        .snapshots()
+        .map((snap) => snap.docs.map((doc) => AppUser.fromMap(doc.data())).toList());
+  }
+
+  Stream<List<AppUser>> cipherSearchUsers(String queryText, String currentUid) {
+    final lowerQuery = queryText.toLowerCase().trim();
+    if (lowerQuery.length < 2) return Stream.value([]);
+
+    return _firestore
+        .collection('users')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        return AppUser.fromMap(doc.data());
+      }).where((user) {
+        final Map<String, dynamic> dataMap = user.toMap();
+        
+        final String searchName = (dataMap['name'] ?? dataMap['displayName'] ?? '').toString().toLowerCase();
+        final String searchEmail = (dataMap['email'] ?? '').toString().toLowerCase();
+        
+        return user.uid != currentUid && 
+               (searchName.contains(lowerQuery) || searchEmail.contains(lowerQuery));
+      }).toList();
+    });
+  }
+} // <--- THIS IS NOW THE TRUE ABSOLUTE FINAL CLOSING BRACE!

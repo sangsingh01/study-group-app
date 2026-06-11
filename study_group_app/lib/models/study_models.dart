@@ -1,0 +1,194 @@
+// lib/models/study_models.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class TaskModel {
+  final String id;
+  final String groupId;
+  final String groupName;
+  final String title;
+  final String description;
+  final DateTime dueDate;
+  final String priority; // 'High', 'Medium', 'Low'
+  final List<String> assignees;
+  final List<String> assigneePhotos;
+  final bool isCompleted;
+  final DateTime? completedAt;
+
+  TaskModel({
+    required this.id,
+    required this.groupId,
+    required this.groupName,
+    required this.title,
+    required this.description,
+    required this.dueDate,
+    required this.priority,
+    required this.assignees,
+    required this.assigneePhotos,
+    required this.isCompleted,
+    this.completedAt,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'groupId': groupId,
+    'groupName': groupName,
+    'title': title,
+    'description': description,
+    'dueDate': Timestamp.fromDate(dueDate),
+    'priority': priority,
+    'assignees': assignees,
+    'assigneePhotos': assigneePhotos,
+    'isCompleted': isCompleted,
+    'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+  };
+
+  factory TaskModel.fromMap(Map<String, dynamic> map) => TaskModel(
+    id: map['id'] ?? '',
+    groupId: map['groupId'] ?? '',
+    groupName: map['groupName'] ?? 'General',
+    title: map['title'] ?? '',
+    description: map['description'] ?? '',
+    dueDate: (map['dueDate'] as Timestamp).toDate(),
+    priority: map['priority'] ?? 'Low',
+    assignees: List<String>.from(map['assignees'] ?? []),
+    assigneePhotos: List<String>.from(map['assigneePhotos'] ?? []),
+    isCompleted: map['isCompleted'] ?? false,
+    completedAt: map['completedAt'] != null ? (map['completedAt'] as Timestamp).toDate() : null,
+  );
+}
+
+class NoteModel {
+  final String id;
+  final String groupId;
+  final String groupName;
+  final String title;
+  final String fileUrl;
+  final String fileType; // 'pdf', 'image', 'doc'
+  final String uploaderName;
+  final DateTime uploadDate;
+  final List<String> starredBy;
+
+  NoteModel({
+    required this.id,
+    required this.groupId,
+    required this.groupName,
+    required this.title,
+    required this.fileUrl,
+    required this.fileType,
+    required this.uploaderName,
+    required this.uploadDate,
+    required this.starredBy,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'groupId': groupId,
+    'groupName': groupName,
+    'title': title,
+    'fileUrl': fileUrl,
+    'fileType': fileType,
+    'uploaderName': uploaderName,
+    'uploadDate': Timestamp.fromDate(uploadDate),
+    'starredBy': starredBy,
+  };
+
+  factory NoteModel.fromMap(Map<String, dynamic> map) => NoteModel(
+    id: map['id'] ?? '',
+    groupId: map['groupId'] ?? '',
+    groupName: map['groupName'] ?? 'General',
+    title: map['title'] ?? '',
+    fileUrl: map['fileUrl'] ?? '',
+    fileType: map['fileType'] ?? 'doc',
+    uploaderName: map['uploaderName'] ?? 'Anonymous',
+    uploadDate: (map['uploadDate'] as Timestamp).toDate(),
+    starredBy: List<String>.from(map['starredBy'] ?? []),
+  );
+}
+
+class QuizModel {
+  final String id;
+  final String title;
+  final String createdBy;
+  final DateTime createdAt;
+  final int timeLimitMinutes;
+  final List<QuestionModel> questions;
+
+  QuizModel({
+    required this.id,
+    required this.title,
+    required this.createdBy,
+    required this.createdAt,
+    required this.timeLimitMinutes,
+    required this.questions,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'title': title,
+    'createdBy': createdBy,
+    'createdAt': Timestamp.fromDate(createdAt),
+    'timeLimitMinutes': timeLimitMinutes,
+    'questions': questions.map((q) => q.toMap()).toList(),
+  };
+
+  factory QuizModel.fromMap(Map<String, dynamic> map) => QuizModel(
+    id: map['id'] ?? '',
+    title: map['title'] ?? '',
+    createdBy: map['createdBy'] ?? '',
+    createdAt: (map['createdAt'] as Timestamp).toDate(),
+    timeLimitMinutes: map['timeLimitMinutes'] ?? 10,
+    questions: (map['questions'] as List? ?? []).map((q) => QuestionModel.fromMap(q)).toList(),
+  );
+}
+
+class QuestionModel {
+  final String questionText;
+  final List<String> options;
+  final int correctOptionIndex;
+  final String? imageUrl;
+
+  QuestionModel({
+    required this.questionText,
+    required this.options,
+    required this.correctOptionIndex,
+    this.imageUrl,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'questionText': questionText,
+    'options': options,
+    'correctOptionIndex': correctOptionIndex,
+    'imageUrl': imageUrl,
+  };
+
+  factory QuestionModel.fromMap(Map<String, dynamic> map) => QuestionModel(
+    questionText: map['questionText'] ?? '',
+    options: List<String>.from(map['options'] ?? []),
+    correctOptionIndex: map['correctOptionIndex'] ?? 0,
+    imageUrl: map['imageUrl'],
+  );
+}
+
+class ProgressModel {
+  final String date;
+  final int studyMinutes;
+  final int tasksCompleted;
+  final int quizzesTaken;
+  final int xpEarned;
+
+  ProgressModel({
+    required this.date,
+    required this.studyMinutes,
+    required this.tasksCompleted,
+    required this.quizzesTaken,
+    required this.xpEarned,
+  });
+
+  factory ProgressModel.fromMap(Map<String, dynamic> map) => ProgressModel(
+    date: map['date'] ?? '',
+    studyMinutes: map['studyMinutes'] ?? 0,
+    tasksCompleted: map['tasksCompleted'] ?? 0,
+    quizzesTaken: map['quizzesTaken'] ?? 0,
+    xpEarned: map['xpEarned'] ?? 0,
+  );
+}

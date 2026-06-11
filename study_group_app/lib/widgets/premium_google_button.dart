@@ -43,7 +43,7 @@ class _PremiumGoogleButtonState extends State<PremiumGoogleButton> {
     const Color glowA = Color(0xFF6C63FF);
     const Color glowB = Color(0xFFFF6584);
 
-    final bgColor = isDark ? Colors.white.withOpacity(0.04) : Colors.white;
+    final bgColor = isDark ? Colors.white.withValues(alpha: 0.04) : Colors.white;
 
     return MouseRegion(
       onEnter: (_) => _onHover(true),
@@ -78,13 +78,13 @@ class _PremiumGoogleButtonState extends State<PremiumGoogleButton> {
                         borderRadius: BorderRadius.circular(widget.radius),
                         border: Border.all(
                           color: isDark
-                              ? Colors.white.withOpacity(0.04)
-                              : Colors.black.withOpacity(0.05),
+                              ? Colors.white.withValues(alpha: 0.04)
+                              : Colors.black.withValues(alpha: 0.05),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(
-                              isDark ? 0.45 : 0.08,
+                            color: Colors.black.withValues(
+                              alpha: isDark ? 0.45 : 0.08,
                             ),
                             blurRadius: 18,
                             offset: const Offset(0, 8),
@@ -101,7 +101,7 @@ class _PremiumGoogleButtonState extends State<PremiumGoogleButton> {
                             height: widget.height - 20,
                             decoration: BoxDecoration(
                               color: isDark
-                                  ? Colors.white.withOpacity(0.06)
+                                  ? Colors.white.withValues(alpha: 0.06)
                                   : Colors.grey.shade50,
                               shape: BoxShape.circle,
                             ),
@@ -142,32 +142,18 @@ class _PremiumGoogleButtonState extends State<PremiumGoogleButton> {
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
-                                        child: Text(
+                                        child: const Text(
                                           'Signing in...',
                                           textAlign: TextAlign.center,
                                           overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                            color: isDark
-                                                ? Colors.white
-                                                : Colors.black87,
-                                          ),
                                         ),
                                       ),
                                     ],
                                   )
-                                : Text(
-                                    widget.label,
+                                : const Text(
+                                    'Continue securely',
                                     textAlign: TextAlign.center,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark
-                                          ? Colors.white
-                                          : Colors.black87,
-                                    ),
                                   ),
                           ),
 
@@ -191,15 +177,15 @@ class _PremiumGoogleButtonState extends State<PremiumGoogleButton> {
                           borderRadius: BorderRadius.circular(widget.radius),
                           gradient: LinearGradient(
                             colors: [
-                              glowA.withOpacity(0.14),
-                              glowB.withOpacity(0.06),
+                              glowA.withValues(alpha: 0.14),
+                              glowB.withValues(alpha: 0.06),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: glowA.withOpacity(0.12),
+                              color: glowA.withValues(alpha: 0.12),
                               blurRadius: 20,
                               spreadRadius: 1.2,
                             ),
