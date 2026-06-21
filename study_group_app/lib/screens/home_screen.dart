@@ -363,24 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Divider(color: Colors.white24, height: 1),
           ),
           Row(
-            children: [
-              const Text("🔥", style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 4),
-              Text(
-                "5 day streak",
-                style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Text("•", style: CipherTextStyles.poppins(fontSize: 13, color: Colors.white54)),
-              ),
-              const Text("⚡", style: TextStyle(fontSize: 14)),
-              const SizedBox(width: 4),
-              Text(
-                "800 XP",
-                style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white),
-              ),
-            ],
+            
           )
         ],
       ),
@@ -404,15 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         return Row(
-          children: [
-            Expanded(child: _buildStatItem(Icons.groups_rounded, groupCount.toString(), "Groups", CipherColors.primary)),
-            const SizedBox(width: 8),
-            Expanded(child: _buildStatItem(Icons.people_alt_rounded, friendCount.toString(), "Friends", CipherColors.secondary)),
-            const SizedBox(width: 8),
-            Expanded(child: _buildStatItem(Icons.bolt_rounded, xpCount.toString(), "XP", CipherColors.orange)),
-            const SizedBox(width: 8),
-            Expanded(child: _buildStatItem(Icons.access_time_filled_rounded, studyTime, "Today", CipherColors.blue)),
-          ],
+         
         );
       },
     );

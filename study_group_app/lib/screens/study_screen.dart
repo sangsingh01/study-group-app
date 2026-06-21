@@ -36,13 +36,13 @@ class _StudyScreenState extends State<StudyScreen> {
                 children: [
                   _buildFeatureGrid(),
                   const SizedBox(height: 24),
-                  _buildProgressSection(),
+                  
                   const SizedBox(height: 24),
-                  _buildStatsRow(),
+                  
                   const SizedBox(height: 24),
-                  _buildDeadlinesSection(),
+                  
                   const SizedBox(height: 24),
-                  _buildTodayGoalsSection(),
+                  
                   const SizedBox(height: 24),
                   _buildQuickAiAccessCard(),
                   const SizedBox(height: 40), // Safe spacing for navigation padding
@@ -194,177 +194,17 @@ class _StudyScreenState extends State<StudyScreen> {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━
   // ANALYTICS & CHARTS SECTION
   // ━━━━━━━━━━━━━━━━━━━━━━━━━
-  Widget _buildProgressSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('My Progress', style: CipherTextStyles.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
-            Container(
-              decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.all(2),
-              child: Row(
-                children: [
-                  _buildToggleBtn("Week", isWeeklySelected, () => setState(() => isWeeklySelected = true)),
-                  _buildToggleBtn("Month", !isWeeklySelected, () => setState(() => isWeeklySelected = false)),
-                ],
-              ),
-            )
-          ],
-        ),
-        const SizedBox(height: 14),
-        Container(
-          width: double.infinity,
-          height: 220,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))]),
-          child: BarChart(
-            BarChartData(
-              alignment: BarChartAlignment.spaceAround,
-              maxY: 4,
-              barTouchData: BarTouchData(
-                touchTooltipData: BarTouchTooltipData(
-                  getTooltipColor: (_) => CipherColors.purplePrimary,
-                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                    return BarTooltipItem(
-                      rod.toY.toStringAsFixed(1) + 'h',
-                      GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    );
-                  },
-                ),
-              ),
-              titlesData: FlTitlesData(
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 28,
-                    getTitlesWidget: (val, meta) => Text('${val.toInt()}h', style: CipherTextStyles.poppins(fontSize: 10, color: Colors.grey)),
-                  )
-                ),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (val, meta) {
-                      const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 6.0),
-                        child: Text(weekdays[val.toInt() % 7], style: CipherTextStyles.poppins(fontSize: 10, color: Colors.grey)),
-                      );
-                    },
-                  )
-                )
-              ),
-              gridData: const FlGridData(show: false),
-              borderData: FlBorderData(show: false),
-              barGroups: [
-                _makeBarGroup(0, 1.5, false),
-                _makeBarGroup(1, 2.3, false),
-                _makeBarGroup(2, 3.5, true), // Today's Highlighted Bar (Brighter Purple)
-                _makeBarGroup(3, 1.2, false),
-                _makeBarGroup(4, 2.8, false),
-                _makeBarGroup(5, 0.5, false),
-                _makeBarGroup(6, 1.9, false),
-              ],
-            ),
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          ),
-        ),
-        const SizedBox(height: 14),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))]),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Subject Breakdown', style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 14),
-              _buildHorizontalSubjectBar("Flutter", "4.2h", 0.85, CipherColors.purplePrimary),
-              _buildHorizontalSubjectBar("Data Science", "2.5h", 0.55, const Color(0xFF43E97B)),
-              _buildHorizontalSubjectBar("Web Dev", "3.1h", 0.70, Colors.blueAccent),
-              _buildHorizontalSubjectBar("AI/ML", "1.8h", 0.40, CipherColors.orangePrimary),
-            ],
-          ),
-        )
-      ],
-    );
-  }
+  
+  
 
-  Widget _buildToggleBtn(String label, bool isSelected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? CipherColors.purplePrimary : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Text(label, style: CipherTextStyles.poppins(fontSize: 12, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.grey)),
-      ),
-    );
-  }
+ 
 
-  BarChartGroupData _makeBarGroup(int x, double y, bool isToday) {
-    return BarChartGroupData(
-      x: x,
-      barRods: [
-        BarChartRodData(
-          toY: y,
-          color: isToday ? const Color(0xFF948DFF) : CipherColors.purplePrimary,
-          width: 14,
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(6), topRight: Radius.circular(6)),
-          
-        )
-      ],
-    );
-  }
-
-  Widget _buildHorizontalSubjectBar(String title, String hrs, double factor, Color barColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          SizedBox(width: 90, child: Text(title, style: CipherTextStyles.poppins(fontSize: 12, color: Colors.black87))),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: factor,
-                color: barColor,
-                backgroundColor: Colors.grey[100],
-                minHeight: 8,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(hrs, style: CipherTextStyles.poppins(fontSize: 12, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
+  
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━
   // QUICK STATUS ROW (4 CARDS)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━
-  Widget _buildStatsRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildStatCard("Streak", "5", Icons.local_fire_department_rounded, CipherColors.aiBg, CipherColors.orangePrimary),
-        _buildStatCard("Avg Time", "2.1h", Icons.access_time_filled_rounded, CipherColors.quizBg, CipherColors.quizText),
-        _buildStatCard("Best Day", "3h", Icons.emoji_events_rounded, CipherColors.notesBg, CipherColors.purplePrimary),
-        _buildStatCard("Goal Rate", "72%", Icons.track_changes_rounded, CipherColors.tasksBg, CipherColors.pinkPrimary),
-      ],
-    );
-  }
+ 
 
   Widget _buildStatCard(String label, String value, IconData icon, Color bg, Color color) {
     return Container(
@@ -385,101 +225,11 @@ class _StudyScreenState extends State<StudyScreen> {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━
   // UPCOMING DEADLINES SECTION
   // ━━━━━━━━━━━━━━━━━━━━━━━━━
-  Widget _buildDeadlinesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Upcoming Deadlines', style: CipherTextStyles.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[200]!),
-            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))],
-          ),
-          child: Row(
-            children: [
-              const CircleAvatar(radius: 4, backgroundColor: Colors.redAccent), // Red means today/urgent
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Submit UI Architecture Spec', style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 2),
-                    Text('Flutter Group • Due 3:00 PM', style: CipherTextStyles.poppins(fontSize: 11, color: Colors.grey)),
-                  ],
-                ),
-              ),
-              Text(
-                'Due in 2 hours',
-                style: CipherTextStyles.poppins(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.redAccent),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
+ 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━
   // TODAY'S GOALS GOAL METRICS
   // ━━━━━━━━━━━━━━━━━━━━━━━━━
-  Widget _buildTodayGoalsSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2))]),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("Today's Goals", style: CipherTextStyles.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              SizedBox(
-                height: 64,
-                width: 64,
-                child: Stack(
-                  children: [
-                    Center(child: CircularProgressIndicator(value: 0.75, color: CipherColors.purplePrimary, backgroundColor: Colors.grey[100], strokeWidth: 5.5)),
-                    Center(child: Text('75%', style: CipherTextStyles.poppins(fontSize: 12, fontWeight: FontWeight.bold))),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('1.5h / 2h Completed', style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(value: 3 / 5, color: const Color(0xFF43E97B), backgroundColor: Colors.grey[100], minHeight: 6),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('3/5 tasks completed', style: CipherTextStyles.poppins(fontSize: 11, color: Colors.grey)),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(color: CipherColors.aiBg, borderRadius: BorderRadius.circular(6)),
-                          child: Text('150 XP', style: CipherTextStyles.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: CipherColors.orangePrimary)),
-                        )
-                      ],
-                    ),
-                  ],
-                ),
-              )
-            ],
-          )
-        ],
-      ),
-    );
-  }
+ 
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━
   // QUICK AI ASSISTANT OVERLAY CARD
