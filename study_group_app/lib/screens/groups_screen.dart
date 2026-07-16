@@ -71,7 +71,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
             ),
             tabs: const [
               Tab(text: 'My Groups'),
-              Tab(text: 'Discover'),
+              // Tab(text: 'Discover'),
             ],
           ),
           const SizedBox(height: 12),

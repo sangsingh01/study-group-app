@@ -286,7 +286,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 16),
             _buildMyGroupsSection(currentUser),
             const SizedBox(height: 16),
-            _buildTodayTasksSection(),
+            // _buildTodayTasksSection(),
             const SizedBox(height: 16),
             _buildAIAssistantBanner(context),
             const SizedBox(height: 24),
@@ -332,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      "${currentUser?.username.split(' ').first ?? 'Learner'}! 👋",
+                      "${currentUser?.username.split(' ').first ?? 'Learner'}! ",
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: CipherTextStyles.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
@@ -615,93 +615,93 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTodayTasksSection() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Text("Today's Tasks", style: CipherTextStyles.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: CipherColors.primaryLight, borderRadius: BorderRadius.circular(10)),
-                  child: Text("3", style: CipherTextStyles.poppins(fontSize: 11, fontWeight: FontWeight.bold, color: CipherColors.primary)),
-                )
-              ],
-            ),
-            GestureDetector(
-              onTap: () => setState(() => _selectedIndex = 3),
-              child: Text("See All", style: CipherTextStyles.poppins(fontSize: 13, color: CipherColors.primary, fontWeight: FontWeight.w600)),
-            )
-          ],
-        ),
-        const SizedBox(height: 12),
-        StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('tasks').limit(3).snapshots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-                child: Column(
-                  children: [
-                    Text("No tasks today 🎉", style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: CipherColors.textSecondary)),
-                    Text("You are all caught up!", style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary)),
-                  ],
-                ),
-              );
-            }
+  // Widget _buildTodayTasksSection() {
+  //   return Column(
+  //     children: [
+  //       Row(
+  //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //         children: [
+  //           Row(
+  //             children: [
+  //               Text("Today's Tasks", style: CipherTextStyles.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
+  //               const SizedBox(width: 8),
+  //               Container(
+  //                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+  //                 decoration: BoxDecoration(color: CipherColors.primaryLight, borderRadius: BorderRadius.circular(10)),
+  //                 child: Text("3", style: CipherTextStyles.poppins(fontSize: 11, fontWeight: FontWeight.bold, color: CipherColors.primary)),
+  //               )
+  //             ],
+  //           ),
+  //           GestureDetector(
+  //             onTap: () => setState(() => _selectedIndex = 3),
+  //             child: Text("See All", style: CipherTextStyles.poppins(fontSize: 13, color: CipherColors.primary, fontWeight: FontWeight.w600)),
+  //           )
+  //         ],
+  //       ),
+  //       const SizedBox(height: 12),
+  //       StreamBuilder<QuerySnapshot>(
+  //         stream: FirebaseFirestore.instance.collection('tasks').limit(3).snapshots(),
+  //         builder: (context, snapshot) {
+  //           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+  //             return Container(
+  //               width: double.infinity,
+  //               padding: const EdgeInsets.all(16),
+  //               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+  //               child: Column(
+  //                 children: [
+  //                   Text("No tasks today 🎉", style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: CipherColors.textSecondary)),
+  //                   Text("You are all caught up!", style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary)),
+  //                 ],
+  //               ),
+  //             );
+  //           }
 
-            final tasks = snapshot.data!.docs;
-            return ListView.builder(
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: tasks.length,
-              itemBuilder: (context, idx) {
-                final data = tasks[idx].data() as Map<String, dynamic>;
-                final title = data['title'] ?? 'Review lecture notes';
-                final groupName = data['groupName'] ?? 'General Space';
-                final priority = data['priority'] ?? 'medium';
+  //           final tasks = snapshot.data!.docs;
+  //           return ListView.builder(
+  //             shrinkWrap: true,
+  //             padding: EdgeInsets.zero,
+  //             physics: const NeverScrollableScrollPhysics(),
+  //             itemCount: tasks.length,
+  //             itemBuilder: (context, idx) {
+  //               final data = tasks[idx].data() as Map<String, dynamic>;
+  //               final title = data['title'] ?? 'Review lecture notes';
+  //               final groupName = data['groupName'] ?? 'General Space';
+  //               final priority = data['priority'] ?? 'medium';
 
-                Color dotColor = Colors.green;
-                if (priority == 'high') dotColor = Colors.red;
-                if (priority == 'medium') dotColor = Colors.amber;
+  //               Color dotColor = Colors.green;
+  //               if (priority == 'high') dotColor = Colors.red;
+  //               if (priority == 'medium') dotColor = Colors.amber;
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-                  child: Row(
-                    children: [
-                      Container(width: 8, height: 8, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(title, style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.bold)),
-                            Text(groupName, style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary)),
-                          ],
-                        ),
-                      ),
-                      Text("5:00 PM", style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary)),
-                      const SizedBox(width: 12),
-                      const Icon(Icons.radio_button_unchecked_rounded, color: CipherColors.border, size: 20)
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        )
-      ],
-    );
-  }
+  //               return Container(
+  //                 margin: const EdgeInsets.only(bottom: 8),
+  //                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+  //                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+  //                 child: Row(
+  //                   children: [
+  //                     Container(width: 8, height: 8, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
+  //                     const SizedBox(width: 14),
+  //                     Expanded(
+  //                       child: Column(
+  //                         crossAxisAlignment: CrossAxisAlignment.start,
+  //                         children: [
+  //                           Text(title, style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.bold)),
+  //                           Text(groupName, style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary)),
+  //                         ],
+  //                       ),
+  //                     ),
+  //                     Text("5:00 PM", style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary)),
+  //                     const SizedBox(width: 12),
+  //                     const Icon(Icons.radio_button_unchecked_rounded, color: CipherColors.border, size: 20)
+  //                   ],
+  //                 ),
+  //               );
+  //             },
+  //           );
+  //         },
+  //       )
+  //     ],
+  //   );
+  // }
 
   Widget _buildAIAssistantBanner(BuildContext context) {
     return GestureDetector(

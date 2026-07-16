@@ -1,6 +1,89 @@
 // lib/models/study_models.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// 🎯 NEW: SharedNote Model for tracking notes shared between users
+class SharedNoteModel {
+  final String id;
+  final String noteId;
+  final String noteTitle;
+  final String noteFileUrl;
+  final String noteFileType; // 'pdf', 'image', 'doc'
+  final String sharedBy; // UID of person sharing
+  final String sharedByName; // Name of person sharing
+  final String sharedByPhotoUrl;
+  final List<String> sharedWith; // UIDs of recipients
+  final DateTime sharedDate;
+  final String message; // Optional message with the share
+  final List<String> viewedBy; // UIDs of people who viewed it
+
+  SharedNoteModel({
+    required this.id,
+    required this.noteId,
+    required this.noteTitle,
+    required this.noteFileUrl,
+    required this.noteFileType,
+    required this.sharedBy,
+    required this.sharedByName,
+    required this.sharedByPhotoUrl,
+    required this.sharedWith,
+    required this.sharedDate,
+    required this.message,
+    required this.viewedBy,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'noteId': noteId,
+    'noteTitle': noteTitle,
+    'noteFileUrl': noteFileUrl,
+    'noteFileType': noteFileType,
+    'sharedBy': sharedBy,
+    'sharedByName': sharedByName,
+    'sharedByPhotoUrl': sharedByPhotoUrl,
+    'sharedWith': sharedWith,
+    'sharedDate': Timestamp.fromDate(sharedDate),
+    'message': message,
+    'viewedBy': viewedBy,
+  };
+
+  factory SharedNoteModel.fromMap(Map<String, dynamic> map) => SharedNoteModel(
+    id: map['id'] ?? '',
+    noteId: map['noteId'] ?? '',
+    noteTitle: map['noteTitle'] ?? 'Untitled Note',
+    noteFileUrl: map['noteFileUrl'] ?? '',
+    noteFileType: map['noteFileType'] ?? 'doc',
+    sharedBy: map['sharedBy'] ?? '',
+    sharedByName: map['sharedByName'] ?? 'Anonymous',
+    sharedByPhotoUrl: map['sharedByPhotoUrl'] ?? '',
+    sharedWith: List<String>.from(map['sharedWith'] ?? []),
+    sharedDate: (map['sharedDate'] as Timestamp).toDate(),
+    message: map['message'] ?? '',
+    viewedBy: List<String>.from(map['viewedBy'] ?? []),
+  );
+
+  // Mark note as viewed
+  SharedNoteModel copyWithViewed(String userId) {
+    final updatedViewed = List<String>.from(viewedBy);
+    if (!updatedViewed.contains(userId)) {
+      updatedViewed.add(userId);
+    }
+    return SharedNoteModel(
+      id: id,
+      noteId: noteId,
+      noteTitle: noteTitle,
+      noteFileUrl: noteFileUrl,
+      noteFileType: noteFileType,
+      sharedBy: sharedBy,
+      sharedByName: sharedByName,
+      sharedByPhotoUrl: sharedByPhotoUrl,
+      sharedWith: sharedWith,
+      sharedDate: sharedDate,
+      message: message,
+      viewedBy: updatedViewed,
+    );
+  }
+}
+
 class TaskModel {
   final String id;
   final String groupId;

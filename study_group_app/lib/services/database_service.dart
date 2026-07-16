@@ -11,6 +11,7 @@ import '../models/group_model.dart';
 import '../models/user_model.dart';
 import '../models/direct_message.dart';
 import '../models/message_model.dart';
+import '../models/study_models.dart';
 
 class DatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -713,4 +714,177 @@ class DatabaseService {
       }).toList();
     });
   }
+
+  // ========== 🎯 SHARED NOTES METHODS ==========
+
+  /// Share a note with one or more friends
+  /// [noteId]: The ID of the note to share
+  /// [noteName]: The title of the note
+  /// [fileUrl]: URL to the note file
+  /// [fileType]: Type of file ('pdf', 'image', 'doc')
+  /// [currentUserId]: UID of the user sharing
+  /// [currentUserName]: Name of the user sharing
+  /// [currentUserPhoto]: Photo URL of the user sharing
+  /// [recipientIds]: List of UIDs to share with
+  /// [message]: Optional message to include with the share
+  Future<void> shareNote({
+    required String noteId,
+    required String noteName,
+    required String fileUrl,
+    required String fileType,
+    required String currentUserId,
+    required String currentUserName,
+    required String currentUserPhoto,
+    required List<String> recipientIds,
+    required String message,
+  }) async {
+    try {
+      final sharedNoteId = _firestore.collection('sharedNotes').doc().id;
+      
+      await _firestore.collection('sharedNotes').doc(sharedNoteId).set({
+        'id': sharedNoteId,
+        'noteId': noteId,
+        'noteTitle': noteName,
+        'noteFileUrl': fileUrl,
+        'noteFileType': fileType,
+        'sharedBy': currentUserId,
+        'sharedByName': currentUserName,
+        'sharedByPhotoUrl': currentUserPhoto,
+        'sharedWith': recipientIds,
+        'sharedDate': Timestamp.now(),
+        'message': message,
+        'viewedBy': [],
+      });
+
+      // Create individual share entries for each recipient for easier querying
+      for (String recipientId in recipientIds) {
+        await _firestore
+            .collection('users')
+            .doc(recipientId)
+            .collection('sharedNotesReceived')
+            .doc(sharedNoteId)
+            .set({
+          'sharedNoteId': sharedNoteId,
+          'sharedDate': Timestamp.now(),
+          'sharedBy': currentUserId,
+          'isRead': false,
+        });
+      }
+    } catch (e) {
+      throw Exception('Error sharing note: $e');
+    }
+  }
+
+  /// Get all notes shared with the current user
+  Stream<List<Map<String, dynamic>>> getSharedNotesStream(String currentUserId) {
+    return _firestore
+        .collection('users')
+        .doc(currentUserId)
+        .collection('sharedNotesReceived')
+        .orderBy('sharedDate', descending: true)
+        .snapshots()
+        .asyncMap((snapshot) async {
+      List<Map<String, dynamic>> sharedNotes = [];
+      
+      for (var doc in snapshot.docs) {
+        final sharedNoteId = doc['sharedNoteId'];
+        final sharedNoteDoc = await _firestore
+            .collection('sharedNotes')
+            .doc(sharedNoteId)
+            .get();
+        
+        if (sharedNoteDoc.exists) {
+          final data = sharedNoteDoc.data() ?? {};
+          final isRead = doc['isRead'] ?? false;
+          sharedNotes.add({...data, 'isRead': isRead});
+        }
+      }
+      
+      return sharedNotes;
+    });
+  }
+
+  /// Mark a shared note as read
+  Future<void> markSharedNoteAsRead(
+    String currentUserId,
+    String sharedNoteId,
+  ) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(currentUserId)
+          .collection('sharedNotesReceived')
+          .doc(sharedNoteId)
+          .update({'isRead': true});
+
+      // Also update the viewedBy list in the main sharedNotes document
+      await _firestore.collection('sharedNotes').doc(sharedNoteId).update({
+        'viewedBy': FieldValue.arrayUnion([currentUserId])
+      });
+    } catch (e) {
+      throw Exception('Error marking note as read: $e');
+    }
+  }
+
+  /// Get notes shared by the current user
+  Stream<List<Map<String, dynamic>>> getSharedNotesByUserStream(
+    String currentUserId,
+  ) {
+    return _firestore
+        .collection('sharedNotes')
+        .where('sharedBy', isEqualTo: currentUserId)
+        .orderBy('sharedDate', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    });
+  }
+
+  /// Delete a shared note (only the sharer can delete)
+  Future<void> deleteSharedNote(String sharedNoteId) async {
+    try {
+      // Get the shared note to find all recipients
+      final doc = await _firestore.collection('sharedNotes').doc(sharedNoteId).get();
+      
+      if (doc.exists) {
+        final data = doc.data() ?? {};
+        final recipientIds = List<String>.from(data['sharedWith'] ?? []);
+        
+        // Delete from each recipient's collection
+        for (String recipientId in recipientIds) {
+          await _firestore
+              .collection('users')
+              .doc(recipientId)
+              .collection('sharedNotesReceived')
+              .doc(sharedNoteId)
+              .delete();
+        }
+      }
+      
+      // Delete the main shared note document
+      await _firestore.collection('sharedNotes').doc(sharedNoteId).delete();
+    } catch (e) {
+      throw Exception('Error deleting shared note: $e');
+    }
+  }
+
+  /// Get unread count of shared notes for current user
+  Future<int> getUnreadSharedNotesCount(String currentUserId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(currentUserId)
+          .collection('sharedNotesReceived')
+          .where('isRead', isEqualTo: false)
+          .count()
+          .get();
+      
+      return snapshot.count ?? 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+}
 } // <--- THIS IS NOW THE TRUE ABSOLUTE FINAL CLOSING BRACE!
