@@ -1,16 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
-
+ 
 class MessageModel {
   final String id;
   final String senderId;
   final String senderName;
   final String receiverId;
-  final String message;
+  final String message; // for file/image messages, use as a caption or leave ''
   final DateTime timestamp;
   final bool isRead;
-  final String messageType;
-
+  final String messageType; // 'text' | 'image' | 'file'
+ 
+  // NEW fields — only populated when messageType is 'image' or 'file'
+  final String? fileUrl;
+  final String? fileName;
+  final int? fileSizeBytes;
+  final String? fileType; // 'pdf' | 'image' | 'doc' | 'ppt' | 'xls'
+ 
   MessageModel({
     String? id,
     required this.senderId,
@@ -20,8 +26,12 @@ class MessageModel {
     required this.timestamp,
     this.isRead = false,
     this.messageType = 'text',
+    this.fileUrl,
+    this.fileName,
+    this.fileSizeBytes,
+    this.fileType,
   }) : id = id ?? const Uuid().v4();
-
+ 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -32,9 +42,13 @@ class MessageModel {
       'timestamp': Timestamp.fromDate(timestamp),
       'isRead': isRead,
       'messageType': messageType,
+      if (fileUrl != null) 'fileUrl': fileUrl,
+      if (fileName != null) 'fileName': fileName,
+      if (fileSizeBytes != null) 'fileSizeBytes': fileSizeBytes,
+      if (fileType != null) 'fileType': fileType,
     };
   }
-
+ 
   factory MessageModel.fromMap(Map<String, dynamic> map) {
     return MessageModel(
       id: map['id'] ?? '',
@@ -47,6 +61,11 @@ class MessageModel {
           : DateTime.now(),
       isRead: map['isRead'] ?? false,
       messageType: map['messageType'] ?? 'text',
+      fileUrl: map['fileUrl'],
+      fileName: map['fileName'],
+      fileSizeBytes: (map['fileSizeBytes'] as num?)?.toInt(),
+      fileType: map['fileType'],
     );
   }
 }
+ 

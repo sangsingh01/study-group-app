@@ -1,32 +1,32 @@
 import 'dart:async';
 import 'dart:typed_data';
-
+ 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart'; 
-
+import 'package:flutter/foundation.dart';
+ 
 import '../models/group_message.dart';
 import '../models/group_model.dart';
 import '../models/user_model.dart';
 import '../models/direct_message.dart';
 import '../models/message_model.dart';
 import '../models/study_models.dart';
-
+ 
 class DatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
+ 
   DatabaseService() {
     _firestore.settings = const Settings(persistenceEnabled: true);
   }
-
+ 
   Future<void> createUserProfile(User authUser) async {
     final uid = authUser.uid;
     final userDoc = _firestore.collection('users').doc(uid);
     final snapshot = await userDoc.get();
-    
+ 
     final email = authUser.email ?? '';
-    
+ 
     // 1. Safe Extraction: If display name is null or empty, split the email prefix cleanly
     String rawName = authUser.displayName ?? '';
     if (rawName.isEmpty && email.isNotEmpty) {
@@ -35,21 +35,21 @@ class DatabaseService {
     if (rawName.isEmpty) {
       rawName = "Student"; // Bulletproof baseline fallback
     }
-
+ 
     // 2. Generate the unique username string safely
     final username = await _generateUniqueUsername(rawName.split(' ').first);
-
+ 
     // 3. Extract existing lists if the user document already exists to prevent wiping them out
     Map<String, dynamic> existingData = snapshot.exists ? (snapshot.data() ?? {}) : {};
     List friendsList = existingData['friends'] ?? [];
     List friendRequestsList = existingData['friendRequests'] ?? [];
     List sentRequestsList = existingData['sentRequests'] ?? [];
-
+ 
     // 4. Safe Write: We add explicit data maps to guarantee the UI never reads a null value
     await userDoc.set({
       'uid': uid,
       'username': username,
-      'name': rawName, // 🌟 CRITICAL FIX: Explicitly map 'name' for UI card visibility
+      'name': rawName, // Explicitly map 'name' for UI card visibility
       'email': email,
       'profileImage': authUser.photoURL,
       'isActive': true,
@@ -57,9 +57,9 @@ class DatabaseService {
       'friends': friendsList,
       'friendRequests': friendRequestsList,
       'sentRequests': sentRequestsList,
-    }, SetOptions(merge: true)); // 🌟 CRITICAL FIX: Merge prevent wipes during app re-auth runs
+    }, SetOptions(merge: true)); // Merge prevents wipes during app re-auth runs
   }
-
+ 
   Future<String> _generateUniqueUsername(String rawName) async {
     final base = rawName.trim().toLowerCase().replaceAll(
       RegExp(r'[^a-z0-9]'),
@@ -67,7 +67,7 @@ class DatabaseService {
     );
     var candidate = base.isEmpty ? 'student' : base;
     var suffix = 1;
-
+ 
     while (true) {
       final query = await _firestore
           .collection('users')
@@ -81,20 +81,21 @@ class DatabaseService {
       suffix += 1;
     }
   }
+ 
   Stream<AppUser?> userStream(String uid) {
     return _firestore.collection('users').doc(uid).snapshots().map((snapshot) {
       if (!snapshot.exists || snapshot.data() == null) return null;
       return AppUser.fromMap(snapshot.data()!);
     });
   }
-
+ 
   Future<AppUser?> getUserByUid(String uid) async {
     final snapshot = await _firestore.collection('users').doc(uid).get();
     return snapshot.exists && snapshot.data() != null
         ? AppUser.fromMap(snapshot.data()!)
         : null;
   }
-
+ 
   Stream<List<AppUser>> searchUsers(String query, {String? excludeUid}) {
     final searchText = query.toLowerCase();
     return _firestore
@@ -111,12 +112,12 @@ class DatabaseService {
               .toList(),
         );
   }
-
+ 
   Future<List<AppUser>> getUsersByIds(List<String> uids) async {
     if (uids.isEmpty) return [];
     final results = <AppUser>[];
     final chunks = _chunkList(uids, 10);
-
+ 
     for (final chunk in chunks) {
       final query = await _firestore
           .collection('users')
@@ -126,12 +127,12 @@ class DatabaseService {
     }
     return results;
   }
-
+ 
   Stream<List<AppUser>> usersByIdsStream(List<String> uids) {
     if (uids.isEmpty) {
       return Stream<List<AppUser>>.value([]);
     }
-
+ 
     if (uids.length <= 10) {
       return _firestore
           .collection('users')
@@ -143,15 +144,15 @@ class DatabaseService {
                 .toList(),
           );
     }
-
+ 
     final controller = StreamController<List<AppUser>>.broadcast();
     final subs = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
     final cache = <String, AppUser>{};
-
+ 
     void emit() {
       controller.add(cache.values.toList());
     }
-
+ 
     for (final chunk in _chunkList(uids, 10)) {
       final stream = _firestore
           .collection('users')
@@ -166,16 +167,16 @@ class DatabaseService {
       });
       subs.add(subscription);
     }
-
+ 
     controller.onCancel = () {
       for (final subscription in subs) {
         subscription.cancel();
       }
     };
-
+ 
     return controller.stream;
   }
-
+ 
   List<List<T>> _chunkList<T>(List<T> list, int chunkSize) {
     final chunks = <List<T>>[];
     for (var i = 0; i < list.length; i += chunkSize) {
@@ -188,7 +189,7 @@ class DatabaseService {
     }
     return chunks;
   }
-
+ 
   Future<AppUser?> getUserByUsername(String username) async {
     final normalized = username.trim().toLowerCase();
     if (normalized.isEmpty) return null;
@@ -197,11 +198,11 @@ class DatabaseService {
         .where('username', isEqualTo: normalized)
         .limit(1)
         .get();
-
+ 
     if (query.docs.isEmpty) return null;
     return AppUser.fromMap(query.docs.first.data());
   }
-
+ 
   Future<GroupModel?> joinGroupByInviteCode(
     String inviteCode,
     String userId,
@@ -212,55 +213,55 @@ class DatabaseService {
     await joinGroup(group.id, userId);
     return group;
   }
-
+ 
   Future<void> sendFriendRequest(String fromUid, String toUid) async {
     if (fromUid == toUid) return;
     final fromRef = _firestore.collection('users').doc(fromUid);
     final toRef = _firestore.collection('users').doc(toUid);
-
+ 
     await _firestore.runTransaction((transaction) async {
       final fromSnapshot = await transaction.get(fromRef);
       final toSnapshot = await transaction.get(toRef);
       if (!fromSnapshot.exists || !toSnapshot.exists) return;
-
+ 
       final fromData = fromSnapshot.data() ?? {};
       final toData = toSnapshot.data() ?? {};
-
+ 
       final List myFriends = fromData['friends'] ?? [];
       final List mySentRequests = fromData['sentRequests'] ?? [];
       final List receiverIncomingRequests = toData['friendRequests'] ?? [];
-
-      if (myFriends.contains(toUid) || 
-          mySentRequests.contains(toUid) || 
+ 
+      if (myFriends.contains(toUid) ||
+          mySentRequests.contains(toUid) ||
           receiverIncomingRequests.contains(fromUid)) {
-        return; 
+        return;
       }
-
+ 
       transaction.update(toRef, {
         'friendRequests': FieldValue.arrayUnion([fromUid]),
       });
-
+ 
       transaction.update(fromRef, {
         'sentRequests': FieldValue.arrayUnion([toUid]),
       });
     });
   }
-
+ 
   Future<void> acceptFriendRequest(
     String currentUid,
     String requesterUid,
   ) async {
     final currentRef = _firestore.collection('users').doc(currentUid);
     final requesterRef = _firestore.collection('users').doc(requesterUid);
-    
+ 
     final chatId = getChatId(currentUid, requesterUid);
     final chatRef = _firestore.collection('chats').doc(chatId);
-
+ 
     await _firestore.runTransaction((transaction) async {
       final currentSnapshot = await transaction.get(currentRef);
       final requesterSnapshot = await transaction.get(requesterRef);
       if (!currentSnapshot.exists || !requesterSnapshot.exists) return;
-
+ 
       transaction.update(currentRef, {
         'friends': FieldValue.arrayUnion([requesterUid]),
         'friendRequests': FieldValue.arrayRemove([requesterUid]),
@@ -270,7 +271,7 @@ class DatabaseService {
         'sentRequests': FieldValue.arrayRemove([currentUid]),
       });
     });
-
+ 
     await chatRef.set({
       'chatId': chatId,
       'lastMessage': 'You are now connected! Start chatting 👋',
@@ -283,18 +284,18 @@ class DatabaseService {
       'typing_$requesterUid': false,
     }, SetOptions(merge: true));
   }
-
+ 
   Future<void> declineFriendRequest(
     String currentUid,
     String requesterUid,
   ) async {
     final currentRef = _firestore.collection('users').doc(currentUid);
     final requesterRef = _firestore.collection('users').doc(requesterUid);
-
+ 
     await _firestore.runTransaction((transaction) async {
       final currentSnapshot = await transaction.get(currentRef);
       final requesterSnapshot = await transaction.get(requesterRef);
-      
+ 
       if (currentSnapshot.exists) {
         transaction.update(currentRef, {
           'friendRequests': FieldValue.arrayRemove([requesterUid]),
@@ -307,11 +308,11 @@ class DatabaseService {
       }
     });
   }
-
+ 
   Future<void> createGroup(GroupModel group) async {
     await _firestore.collection('groups').doc(group.id).set(group.toMap());
   }
-
+ 
   Stream<List<GroupModel>> getGroups() {
     return _firestore
         .collection('groups')
@@ -323,7 +324,7 @@ class DatabaseService {
               .toList(),
         );
   }
-
+ 
   Stream<GroupModel?> groupStream(String groupId) {
     return _firestore.collection('groups').doc(groupId).snapshots().map((
       snapshot,
@@ -332,7 +333,7 @@ class DatabaseService {
       return GroupModel.fromMap(snapshot.data()!);
     });
   }
-
+ 
   Future<GroupModel?> getGroupByInviteCode(String inviteCode) async {
     final query = await _firestore
         .collection('groups')
@@ -342,14 +343,14 @@ class DatabaseService {
     if (query.docs.isEmpty) return null;
     return GroupModel.fromMap(query.docs.first.data());
   }
-
+ 
   Future<void> addGroupMember(String groupId, String memberUid) async {
     await _firestore.collection('groups').doc(groupId).update({
       'members': FieldValue.arrayUnion([memberUid]),
       'memberRoles.$memberUid': 'member',
     });
   }
-
+ 
   Stream<List<GroupModel>> getMyGroups(String userId) {
     return _firestore
         .collection('groups')
@@ -361,14 +362,14 @@ class DatabaseService {
               .toList(),
         );
   }
-
+ 
   Future<void> joinGroup(String groupId, String userId) async {
     await _firestore.collection('groups').doc(groupId).update({
       'members': FieldValue.arrayUnion([userId]),
       'memberRoles.$userId': 'member',
     });
   }
-
+ 
   String generateGroupMessageId(String groupId) {
     return _firestore
         .collection('groups')
@@ -377,7 +378,7 @@ class DatabaseService {
         .doc()
         .id;
   }
-
+ 
   Stream<List<GroupMessage>> groupMessages(String groupId) {
     return _firestore
         .collection('groups')
@@ -391,7 +392,7 @@ class DatabaseService {
               .toList(),
         );
   }
-
+ 
   Future<void> sendGroupMessage(String groupId, GroupMessage message) async {
     await _firestore
         .collection('groups')
@@ -401,6 +402,33 @@ class DatabaseService {
         .set(message.toMap());
   }
 
+  /// Sends a file/image GroupMessage AND auto-saves it into the `notes`
+/// collection so it shows up in NotesScreen for this group — mirrors
+/// sendDirectFileMessage's behavior for DMs.
+Future<void> sendGroupFileMessage({
+  required String groupId,
+  required GroupMessage message,
+}) async {
+  // 1. Send as a normal group message
+  await sendGroupMessage(groupId, message);
+
+  // 2. Auto-save into the plain `notes` collection your NotesScreen reads.
+  if (message.type == 'image' || message.type == 'file') {
+    await _firestore.collection('notes').add({
+      'title': message.fileName ?? 'Untitled',
+      'fileType': message.fileType ?? 'doc',
+      'fileUrl': message.fileUrl,
+      'fileSizeBytes': message.fileSizeBytes,
+      'uploaderId': message.senderUid,
+      'uploaderName': message.senderName,
+      'groupId': groupId,
+      'dmChatId': null,
+      'starredBy': [],
+      'createdAt': Timestamp.now(),
+    });
+  }
+}
+ 
   Future<String> uploadImageData({
     required Uint8List bytes,
     required String path,
@@ -408,19 +436,19 @@ class DatabaseService {
   }) async {
     final ref = FirebaseStorage.instance.ref().child(path);
     final uploadTask = ref.putData(bytes);
-
+ 
     uploadTask.snapshotEvents.listen((snapshot) {
       if (onProgress != null && snapshot.totalBytes > 0) {
         final progress = snapshot.bytesTransferred / snapshot.totalBytes;
         onProgress(progress);
       }
     });
-
+ 
     final snapshot = await uploadTask;
     final url = await snapshot.ref.getDownloadURL();
     return url;
   }
-
+ 
   Future<String> uploadGroupImage(
     Uint8List bytes,
     String groupId,
@@ -430,12 +458,12 @@ class DatabaseService {
     final path = 'groups/$groupId/messages/$messageId.jpg';
     return uploadImageData(bytes: bytes, path: path, onProgress: onProgress);
   }
-
+ 
   String _conversationId(String a, String b) {
     final parts = [a, b]..sort();
     return parts.join('_');
   }
-
+ 
   Future<void> sendLegacyDirectMessage(DirectMessage message) async {
     final convoId = _conversationId(message.senderUid, message.receiverUid);
     await _firestore
@@ -445,7 +473,7 @@ class DatabaseService {
         .doc(message.id)
         .set(message.toMap());
   }
-
+ 
   Stream<List<DirectMessage>> legacyDirectMessages(String uidA, String uidB) {
     final convoId = _conversationId(uidA, uidB);
     return _firestore
@@ -460,7 +488,7 @@ class DatabaseService {
               .toList(),
         );
   }
-
+ 
   Future<void> setUserActive(String uid, bool isActive) async {
     final ref = _firestore.collection('users').doc(uid);
     await ref.set({
@@ -468,16 +496,16 @@ class DatabaseService {
       'lastSeen': Timestamp.fromDate(DateTime.now()),
     }, SetOptions(merge: true));
   }
-
+ 
   Stream<List<GroupModel>> getGroupsForUser(String userId) {
     final controller = StreamController<List<GroupModel>>.broadcast();
     final subs = <StreamSubscription>[];
     final Map<String, GroupModel> cache = {};
-
+ 
     void emit() {
       controller.add(cache.values.toList());
     }
-
+ 
     final q1 = _firestore
         .collection('groups')
         .where('members', arrayContains: userId)
@@ -486,7 +514,7 @@ class DatabaseService {
         .collection('groups')
         .where('adminUid', isEqualTo: userId)
         .snapshots();
-
+ 
     subs.add(
       q1.listen((snap) {
         for (final doc in snap.docs) {
@@ -496,7 +524,7 @@ class DatabaseService {
         emit();
       }),
     );
-
+ 
     subs.add(
       q2.listen((snap) {
         for (final doc in snap.docs) {
@@ -506,16 +534,16 @@ class DatabaseService {
         emit();
       }),
     );
-
+ 
     controller.onCancel = () {
       for (final s in subs) {
         s.cancel();
       }
     };
-
+ 
     return controller.stream;
   }
-
+ 
   Future<void> updateGroupTypingStatus({
     required String groupId,
     required String uid,
@@ -534,7 +562,7 @@ class DatabaseService {
           'updatedAt': Timestamp.now(),
         }, SetOptions(merge: true));
   }
-
+ 
   Stream<List<String>> groupTypingUsers(String groupId, String excludeUid) {
     return _firestore
         .collection('groups')
@@ -550,13 +578,13 @@ class DatabaseService {
               .toList(),
         );
   }
-
+ 
   String getChatId(String uid1, String uid2) {
     final List<String> ids = [uid1, uid2];
     ids.sort();
     return ids.join('_');
   }
-
+ 
   Future<void> sendDirectMessage(
     String chatId,
     MessageModel message,
@@ -564,14 +592,14 @@ class DatabaseService {
   ) async {
     try {
       final batch = _firestore.batch();
-      
+ 
       final msgRef = _firestore
           .collection('chats')
           .doc(chatId)
           .collection('messages')
           .doc(message.id);
       batch.set(msgRef, message.toMap());
-      
+ 
       final chatRef = _firestore.collection('chats').doc(chatId);
       batch.set(chatRef, {
         'lastMessage': message.message,
@@ -581,14 +609,14 @@ class DatabaseService {
         'unread_$receiverId': FieldValue.increment(1),
         'unread_${message.senderId}': 0,
       }, SetOptions(merge: true));
-      
+ 
       await batch.commit();
     } catch (e) {
       debugPrint('Error sending direct message: $e');
       rethrow;
     }
   }
-
+ 
   Stream<List<MessageModel>> getDirectMessages(String chatId) {
     return _firestore
         .collection('chats')
@@ -600,7 +628,7 @@ class DatabaseService {
             .map((doc) => MessageModel.fromMap(doc.data()))
             .toList());
   }
-
+ 
   Stream<List<Map<String, dynamic>>> getChatList(String userId) {
     return _firestore
         .collection('chats')
@@ -612,14 +640,14 @@ class DatabaseService {
               return data;
             }).toList());
   }
-
+ 
   Future<void> markMessagesAsRead(String chatId, String userId) async {
     try {
       await _firestore
           .collection('chats')
           .doc(chatId)
           .update({'unread_$userId': 0});
-          
+ 
       final unreadMsgs = await _firestore
           .collection('chats')
           .doc(chatId)
@@ -627,7 +655,7 @@ class DatabaseService {
           .where('receiverId', isEqualTo: userId)
           .where('isRead', isEqualTo: false)
           .get();
-          
+ 
       final batch = _firestore.batch();
       for (var doc in unreadMsgs.docs) {
         batch.update(doc.reference, {'isRead': true});
@@ -637,7 +665,7 @@ class DatabaseService {
       debugPrint('Error marking messages as read: $e');
     }
   }
-
+ 
   Future<void> updateTypingStatus(
     String chatId,
     String userId,
@@ -648,7 +676,7 @@ class DatabaseService {
         .doc(chatId)
         .update({'typing_$userId': isTyping});
   }
-
+ 
   Stream<bool> getFriendTypingStatus(String chatId, String friendId) {
     return _firestore
         .collection('chats')
@@ -656,7 +684,7 @@ class DatabaseService {
         .snapshots()
         .map((doc) => doc.data()?['typing_$friendId'] ?? false);
   }
-
+ 
   Stream<int> getTotalUnreadCount(String userId) {
     return _firestore
         .collection('chats')
@@ -672,18 +700,18 @@ class DatabaseService {
           return totalUnread;
         });
   }
-
+ 
   Future<void> leaveGroup(String groupId, String userId) async {
     await _firestore.collection('groups').doc(groupId).update({
       'members': FieldValue.arrayRemove([userId]),
       'memberRoles.$userId': FieldValue.delete(),
     });
   }
-
+ 
   // =========================================================================
-  // 🚀 CIPHER FRIEND SYSTEM COMPILER FIXES (CORRECTLY NESTED INSIDE CLASS)
+  // 🚀 CIPHER FRIEND SYSTEM
   // =========================================================================
-
+ 
   Stream<List<AppUser>> cipherUsersByIdsStream(List<String> uids) {
     if (uids.isEmpty) return Stream.value([]);
     return _firestore
@@ -692,11 +720,11 @@ class DatabaseService {
         .snapshots()
         .map((snap) => snap.docs.map((doc) => AppUser.fromMap(doc.data())).toList());
   }
-
+ 
   Stream<List<AppUser>> cipherSearchUsers(String queryText, String currentUid) {
     final lowerQuery = queryText.toLowerCase().trim();
     if (lowerQuery.length < 2) return Stream.value([]);
-
+ 
     return _firestore
         .collection('users')
         .snapshots()
@@ -705,28 +733,19 @@ class DatabaseService {
         return AppUser.fromMap(doc.data());
       }).where((user) {
         final Map<String, dynamic> dataMap = user.toMap();
-        
+ 
         final String searchName = (dataMap['name'] ?? dataMap['displayName'] ?? '').toString().toLowerCase();
         final String searchEmail = (dataMap['email'] ?? '').toString().toLowerCase();
-        
-        return user.uid != currentUid && 
+ 
+        return user.uid != currentUid &&
                (searchName.contains(lowerQuery) || searchEmail.contains(lowerQuery));
       }).toList();
     });
   }
-
+ 
   // ========== 🎯 SHARED NOTES METHODS ==========
-
+ 
   /// Share a note with one or more friends
-  /// [noteId]: The ID of the note to share
-  /// [noteName]: The title of the note
-  /// [fileUrl]: URL to the note file
-  /// [fileType]: Type of file ('pdf', 'image', 'doc')
-  /// [currentUserId]: UID of the user sharing
-  /// [currentUserName]: Name of the user sharing
-  /// [currentUserPhoto]: Photo URL of the user sharing
-  /// [recipientIds]: List of UIDs to share with
-  /// [message]: Optional message to include with the share
   Future<void> shareNote({
     required String noteId,
     required String noteName,
@@ -740,7 +759,7 @@ class DatabaseService {
   }) async {
     try {
       final sharedNoteId = _firestore.collection('sharedNotes').doc().id;
-      
+ 
       await _firestore.collection('sharedNotes').doc(sharedNoteId).set({
         'id': sharedNoteId,
         'noteId': noteId,
@@ -755,7 +774,7 @@ class DatabaseService {
         'message': message,
         'viewedBy': [],
       });
-
+ 
       // Create individual share entries for each recipient for easier querying
       for (String recipientId in recipientIds) {
         await _firestore
@@ -774,7 +793,7 @@ class DatabaseService {
       throw Exception('Error sharing note: $e');
     }
   }
-
+ 
   /// Get all notes shared with the current user
   Stream<List<Map<String, dynamic>>> getSharedNotesStream(String currentUserId) {
     return _firestore
@@ -785,25 +804,25 @@ class DatabaseService {
         .snapshots()
         .asyncMap((snapshot) async {
       List<Map<String, dynamic>> sharedNotes = [];
-      
+ 
       for (var doc in snapshot.docs) {
         final sharedNoteId = doc['sharedNoteId'];
         final sharedNoteDoc = await _firestore
             .collection('sharedNotes')
             .doc(sharedNoteId)
             .get();
-        
+ 
         if (sharedNoteDoc.exists) {
           final data = sharedNoteDoc.data() ?? {};
           final isRead = doc['isRead'] ?? false;
           sharedNotes.add({...data, 'isRead': isRead});
         }
       }
-      
+ 
       return sharedNotes;
     });
   }
-
+ 
   /// Mark a shared note as read
   Future<void> markSharedNoteAsRead(
     String currentUserId,
@@ -816,7 +835,7 @@ class DatabaseService {
           .collection('sharedNotesReceived')
           .doc(sharedNoteId)
           .update({'isRead': true});
-
+ 
       // Also update the viewedBy list in the main sharedNotes document
       await _firestore.collection('sharedNotes').doc(sharedNoteId).update({
         'viewedBy': FieldValue.arrayUnion([currentUserId])
@@ -825,7 +844,7 @@ class DatabaseService {
       throw Exception('Error marking note as read: $e');
     }
   }
-
+ 
   /// Get notes shared by the current user
   Stream<List<Map<String, dynamic>>> getSharedNotesByUserStream(
     String currentUserId,
@@ -841,17 +860,17 @@ class DatabaseService {
           .toList();
     });
   }
-
+ 
   /// Delete a shared note (only the sharer can delete)
   Future<void> deleteSharedNote(String sharedNoteId) async {
     try {
       // Get the shared note to find all recipients
       final doc = await _firestore.collection('sharedNotes').doc(sharedNoteId).get();
-      
+ 
       if (doc.exists) {
         final data = doc.data() ?? {};
         final recipientIds = List<String>.from(data['sharedWith'] ?? []);
-        
+ 
         // Delete from each recipient's collection
         for (String recipientId in recipientIds) {
           await _firestore
@@ -862,14 +881,14 @@ class DatabaseService {
               .delete();
         }
       }
-      
+ 
       // Delete the main shared note document
       await _firestore.collection('sharedNotes').doc(sharedNoteId).delete();
     } catch (e) {
       throw Exception('Error deleting shared note: $e');
     }
   }
-
+ 
   /// Get unread count of shared notes for current user
   Future<int> getUnreadSharedNotesCount(String currentUserId) async {
     try {
@@ -880,11 +899,72 @@ class DatabaseService {
           .where('isRead', isEqualTo: false)
           .count()
           .get();
-      
+ 
       return snapshot.count ?? 0;
     } catch (e) {
       return 0;
     }
   }
+ 
+  // =========================================================================
+  // 📁 DIRECT CHAT FILE & IMAGE UPLOADS (NEW — for chat file sharing feature)
+  // =========================================================================
+ 
+  /// Uploads a document (pdf, etc.) sent in a DM to Storage.
+  /// Reuses the same bytes-based pattern as uploadImageData above —
+  /// works fine for non-image files too, despite the method's name.
+  Future<String> uploadDirectChatFile({
+    required Uint8List bytes,
+    required String chatId,
+    required String messageId,
+    required String fileName,
+    void Function(double progress)? onProgress,
+  }) async {
+    final path = 'chat_files/$chatId/${messageId}_$fileName';
+    return uploadImageData(bytes: bytes, path: path, onProgress: onProgress);
+  }
+ 
+  /// Uploads an image sent in a DM to Storage (mirrors uploadGroupImage,
+  /// but for the 1:1 chats collection).
+  Future<String> uploadDirectChatImage({
+    required Uint8List bytes,
+    required String chatId,
+    required String messageId,
+    void Function(double progress)? onProgress,
+  }) async {
+    final path = 'chat_files/$chatId/$messageId.jpg';
+    return uploadImageData(bytes: bytes, path: path, onProgress: onProgress);
+  }
+ 
+  /// Sends a file/image MessageModel in a DM chat AND auto-saves it into
+  /// the `notes` collection so it shows up in NotesScreen for this DM.
+  ///
+  /// [message] must already have messageType set to 'image' or 'file',
+  /// and fileUrl/fileName/fileType/fileSizeBytes populated.
+  Future<void> sendDirectFileMessage({
+    required String chatId,
+    required MessageModel message,
+    required String receiverId,
+  }) async {
+    // 1. Send as a normal chat message — reuses your existing logic
+    //    (updates lastMessage, unread counts, etc. automatically).
+    await sendDirectMessage(chatId, message, receiverId);
+ 
+    // 2. Auto-save into the plain `notes` collection your NotesScreen reads.
+    if (message.messageType == 'image' || message.messageType == 'file') {
+      await _firestore.collection('notes').add({
+        'title': message.fileName ?? 'Untitled',
+        'fileType': message.fileType ?? 'doc',
+        'fileUrl': message.fileUrl,
+        'fileSizeBytes': message.fileSizeBytes,
+        'uploaderId': message.senderId,
+        'uploaderName': message.senderName,
+        'groupId': null,
+        'dmChatId': chatId,
+        'starredBy': [],
+        'createdAt': Timestamp.now(),
+      });
+    }
+  }
 }
- // <--- THIS IS NOW THE TRUE ABSOLUTE FINAL CLOSING BRACE!
+ 

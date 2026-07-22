@@ -17,6 +17,7 @@ import 'chats_screen.dart';
 import 'friend_requests_screen.dart';
 import 'study_screen.dart';
 
+
 class HomeScreen extends StatefulWidget {
   final User user;
   const HomeScreen({super.key, required this.user});

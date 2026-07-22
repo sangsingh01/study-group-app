@@ -6,9 +6,13 @@ class GroupMessage {
   final String senderName;
   final String? senderImage;
   final String groupId;
-  final String type; // 'text' | 'note' | 'image'
-  final String content; // text or note content or image filename/alt
+  final String type; // 'text' | 'note' | 'image' | 'file'
+  final String content; // text or note content or image/file caption
   final String? imageUrl; // if type == 'image'
+  final String? fileUrl; // if type == 'file' (or 'image', reuses same Cloudinary url)
+  final String? fileName;
+  final String? fileType; // 'pdf' | 'doc' | 'ppt' | 'xls' | 'image'
+  final int? fileSizeBytes;
   final DateTime createdAt;
   final bool edited;
 
@@ -21,6 +25,10 @@ class GroupMessage {
     required this.type,
     required this.content,
     this.imageUrl,
+    this.fileUrl,
+    this.fileName,
+    this.fileType,
+    this.fileSizeBytes,
     required this.createdAt,
     this.edited = false,
   });
@@ -35,6 +43,10 @@ class GroupMessage {
       'type': type,
       'content': content,
       'imageUrl': imageUrl,
+      'fileUrl': fileUrl,
+      'fileName': fileName,
+      'fileType': fileType,
+      'fileSizeBytes': fileSizeBytes,
       'createdAt': Timestamp.fromDate(createdAt),
       'edited': edited,
     };
@@ -52,6 +64,10 @@ class GroupMessage {
       type: map['type'] ?? (map['imageUrl'] != null ? 'image' : 'text'),
       content: content,
       imageUrl: map['imageUrl'] as String?,
+      fileUrl: map['fileUrl'] as String?,
+      fileName: map['fileName'] as String?,
+      fileType: map['fileType'] as String?,
+      fileSizeBytes: map['fileSizeBytes'] as int?,
       createdAt: map['createdAt'] is Timestamp
           ? (map['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
