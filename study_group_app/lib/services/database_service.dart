@@ -12,6 +12,9 @@ import '../models/user_model.dart';
 import '../models/direct_message.dart';
 import '../models/message_model.dart';
 import '../models/study_models.dart';
+import '../models/task_model.dart';
+import '../models/assignment_model.dart';
+import 'cloudinary_service.dart'; // the one built for chat file sharing
  
 class DatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -401,33 +404,33 @@ class DatabaseService {
         .doc(message.id)
         .set(message.toMap());
   }
-
+ 
   /// Sends a file/image GroupMessage AND auto-saves it into the `notes`
-/// collection so it shows up in NotesScreen for this group — mirrors
-/// sendDirectFileMessage's behavior for DMs.
-Future<void> sendGroupFileMessage({
-  required String groupId,
-  required GroupMessage message,
-}) async {
-  // 1. Send as a normal group message
-  await sendGroupMessage(groupId, message);
-
-  // 2. Auto-save into the plain `notes` collection your NotesScreen reads.
-  if (message.type == 'image' || message.type == 'file') {
-    await _firestore.collection('notes').add({
-      'title': message.fileName ?? 'Untitled',
-      'fileType': message.fileType ?? 'doc',
-      'fileUrl': message.fileUrl,
-      'fileSizeBytes': message.fileSizeBytes,
-      'uploaderId': message.senderUid,
-      'uploaderName': message.senderName,
-      'groupId': groupId,
-      'dmChatId': null,
-      'starredBy': [],
-      'createdAt': Timestamp.now(),
-    });
+  /// collection so it shows up in NotesScreen for this group — mirrors
+  /// sendDirectFileMessage's behavior for DMs.
+  Future<void> sendGroupFileMessage({
+    required String groupId,
+    required GroupMessage message,
+  }) async {
+    // 1. Send as a normal group message
+    await sendGroupMessage(groupId, message);
+ 
+    // 2. Auto-save into the plain `notes` collection your NotesScreen reads.
+    if (message.type == 'image' || message.type == 'file') {
+      await _firestore.collection('notes').add({
+        'title': message.fileName ?? 'Untitled',
+        'fileType': message.fileType ?? 'doc',
+        'fileUrl': message.fileUrl,
+        'fileSizeBytes': message.fileSizeBytes,
+        'uploaderId': message.senderUid,
+        'uploaderName': message.senderName,
+        'groupId': groupId,
+        'dmChatId': null,
+        'starredBy': [],
+        'createdAt': Timestamp.now(),
+      });
+    }
   }
-}
  
   Future<String> uploadImageData({
     required Uint8List bytes,
@@ -966,5 +969,356 @@ Future<void> sendGroupFileMessage({
       });
     }
   }
+ 
+  // =========================================================================
+  // ✅ TASK MANAGEMENT
+  // =========================================================================
+ 
+  String generateTaskId() {
+    return _firestore.collection('tasks').doc().id;
+  }
+ 
+  /// Creates a new task (personal or group). [task.id] should already be
+  /// generated via [generateTaskId] before calling this.
+  Future<void> createTask(TaskModel task) async {
+    await _firestore.collection('tasks').doc(task.id).set(task.toMap());
+  }
+ 
+  /// Generic partial update — pass only the fields that changed.
+  /// e.g. updateTask(taskId, {'title': 'New title', 'priority': 'high'})
+  Future<void> updateTask(String taskId, Map<String, dynamic> updates) async {
+    await _firestore.collection('tasks').doc(taskId).update(updates);
+  }
+ 
+  Future<void> deleteTask(String taskId) async {
+    await _firestore.collection('tasks').doc(taskId).delete();
+  }
+ 
+  /// Updates just the status, and stamps completedAt/completedBy when
+  /// the task is marked completed (or clears them if reopened).
+  Future<void> updateTaskStatus({
+    required String taskId,
+    required String status,
+    String? completedBy,
+  }) async {
+    final data = <String, dynamic>{'status': status};
+    if (status == 'completed') {
+      data['completedAt'] = Timestamp.now();
+      data['completedBy'] = completedBy;
+    } else {
+      data['completedAt'] = null;
+      data['completedBy'] = null;
+    }
+    await _firestore.collection('tasks').doc(taskId).update(data);
+  }
+ 
+  /// Overwrites the full subtask checklist (simplest approach — read the
+  /// current list client-side, toggle/add/remove locally, then save it back).
+  Future<void> updateTaskSubtasks(String taskId, List<SubtaskModel> subtasks) async {
+    await _firestore.collection('tasks').doc(taskId).update({
+      'subtasks': subtasks.map((s) => s.toMap()).toList(),
+    });
+  }
+ 
+  /// All tasks for one group (group tasks only), newest first.
+  /// Requires a composite index: tasks(groupId Asc, type Asc, createdAt Desc).
+  Stream<List<TaskModel>> streamGroupTasks(String groupId) {
+    return _firestore
+        .collection('tasks')
+        .where('groupId', isEqualTo: groupId)
+        .where('type', isEqualTo: 'group')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snap) =>
+            snap.docs.map((d) => TaskModel.fromMap(d.id, d.data())).toList());
+  }
+ 
+  /// All tasks relevant to a user: personal tasks they created, PLUS any
+  /// group task they're assigned to (across every group). Two Firestore
+  /// queries merged client-side into one stream — same pattern as
+  /// getGroupsForUser() above, since Firestore can't OR across different
+  /// fields in a single query.
+  ///
+  /// NOTE: like getGroupsForUser, this cache is additive — if a task stops
+  /// matching one of the two queries (e.g. you're unassigned from it), it
+  /// will still show in this stream until the doc is deleted or the stream
+  /// is restarted, because we merge by doc id into a persistent map. This
+  /// mirrors the existing pattern elsewhere in this file; revisit if you
+  /// need stricter live consistency.
+  Stream<List<TaskModel>> streamMyTasks(String uid) {
+    final controller = StreamController<List<TaskModel>>.broadcast();
+    final subs = <StreamSubscription>[];
+    final Map<String, TaskModel> cache = {};
+ 
+    void emit() {
+      final list = cache.values.toList();
+      list.sort((a, b) {
+        if (a.dueDate == null && b.dueDate == null) return 0;
+        if (a.dueDate == null) return 1;
+        if (b.dueDate == null) return -1;
+        return a.dueDate!.compareTo(b.dueDate!);
+      });
+      controller.add(list);
+    }
+ 
+    final personalQuery = _firestore
+        .collection('tasks')
+        .where('type', isEqualTo: 'personal')
+        .where('creatorUid', isEqualTo: uid)
+        .snapshots();
+ 
+    final assignedQuery = _firestore
+        .collection('tasks')
+        .where('assignedTo', arrayContains: uid)
+        .snapshots();
+ 
+    subs.add(personalQuery.listen((snap) {
+      for (final doc in snap.docs) {
+        cache[doc.id] = TaskModel.fromMap(doc.id, doc.data());
+      }
+      emit();
+    }));
+ 
+    subs.add(assignedQuery.listen((snap) {
+      for (final doc in snap.docs) {
+        cache[doc.id] = TaskModel.fromMap(doc.id, doc.data());
+      }
+      emit();
+    }));
+ 
+    controller.onCancel = () {
+      for (final s in subs) {
+        s.cancel();
+      }
+    };
+ 
+    return controller.stream;
+  }
+ 
+  // =========================================================================
+  // 📋 ASSIGNMENT COLLABORATION
+  // =========================================================================
+ 
+  /// Creates a new assignment inside a group.
+  Future<String> createAssignment({
+    required String groupId,
+    required String title,
+    required String description,
+    DateTime? dueDate,
+    required String createdBy,
+    required String createdByName,
+  }) async {
+    final ref = _firestore.collection('groups').doc(groupId).collection('assignments').doc();
+ 
+    final assignment = AssignmentModel(
+      id: ref.id,
+      groupId: groupId,
+      title: title,
+      description: description,
+      dueDate: dueDate,
+      createdBy: createdBy,
+      createdByName: createdByName,
+      createdAt: DateTime.now(),
+      memberCompletion: {},
+      attachments: [],
+    );
+ 
+    await ref.set(assignment.toMap());
+    return ref.id;
+  }
+ 
+  /// Live stream of all assignments in a group, most recently created first.
+  Stream<List<AssignmentModel>> getGroupAssignments(String groupId) {
+    return _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('assignments')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => AssignmentModel.fromMap(doc.id, doc.data())).toList());
+  }
+ 
+  /// Live stream of a single assignment (for the detail screen).
+  Stream<AssignmentModel?> getAssignmentStream(String groupId, String assignmentId) {
+    return _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('assignments')
+        .doc(assignmentId)
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      return AssignmentModel.fromMap(doc.id, doc.data()!);
+    });
+  }
+ 
+  /// Toggles the current user's own completion status for an assignment.
+  /// Only ever writes the caller's own uid key — one member can't mark
+  /// another member done.
+  Future<void> setMyAssignmentCompletion({
+    required String groupId,
+    required String assignmentId,
+    required String uid,
+    required bool completed,
+  }) async {
+    await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('assignments')
+        .doc(assignmentId)
+        .update({'memberCompletion.$uid': completed});
+  }
+ 
+  /// Uploads a file via Cloudinary and attaches it to the assignment.
+  Future<void> addAssignmentAttachment({
+    required String groupId,
+    required String assignmentId,
+    required Uint8List bytes,
+    required String fileName,
+    required bool isImage,
+    required String uploaderId,
+    required String uploaderName,
+  }) async {
+    final cloudinary = CloudinaryService();
+    final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
+    final fileType = isImage
+        ? 'image'
+        : (ext == 'pdf'
+            ? 'pdf'
+            : (['doc', 'docx'].contains(ext) ? 'doc' : (['ppt', 'pptx'].contains(ext) ? 'ppt' : 'doc')));
+ 
+    final response = await cloudinary.uploadBytes(
+      bytes: bytes,
+      fileName: fileName,
+      isImage: isImage,
+    );
+ 
+    final attachment = AssignmentAttachment(
+      fileUrl: response.secureUrl,
+      fileName: fileName,
+      fileType: fileType,
+      uploadedBy: uploaderId,
+      uploadedByName: uploaderName,
+    );
+ 
+    await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('assignments')
+        .doc(assignmentId)
+        .update({
+      'attachments': FieldValue.arrayUnion([attachment.toMap()]),
+    });
+  }
+ 
+  Future<void> deleteAssignment(String groupId, String assignmentId) async {
+    await _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('assignments')
+        .doc(assignmentId)
+        .delete();
+  }
+ 
+  // ---- comments (mini discussion thread per assignment) ----
+ 
+  Future<void> addAssignmentComment({
+    required String groupId,
+    required String assignmentId,
+    required String text,
+    required String senderId,
+    required String senderName,
+  }) async {
+    final ref = _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('assignments')
+        .doc(assignmentId)
+        .collection('comments')
+        .doc();
+ 
+    final comment = AssignmentCommentModel(
+      id: ref.id,
+      text: text,
+      senderId: senderId,
+      senderName: senderName,
+      timestamp: DateTime.now(),
+    );
+ 
+    await ref.set(comment.toMap());
+  }
+ 
+  Stream<List<AssignmentCommentModel>> getAssignmentComments(String groupId, String assignmentId) {
+    return _firestore
+        .collection('groups')
+        .doc(groupId)
+        .collection('assignments')
+        .doc(assignmentId)
+        .collection('comments')
+        .orderBy('timestamp', descending: false)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => AssignmentCommentModel.fromMap(doc.id, doc.data())).toList());
+  }
 }
+ 
+// =========================================================================
+// SETUP NOTES (not code — read before wiring in)
+// =========================================================================
+//
+// TASKS
+// 1. Also add task_model.dart to lib/models/ and tasks_ui.dart to
+//    lib/screens/ (the UI screens/widgets — TaskCard, create-task sheet,
+//    TaskDetailScreen, MyTasksScreen, GroupTasksScreen).
+// 2. Firestore composite index needed for streamGroupTasks:
+//    Collection: tasks | Fields: groupId (Asc), type (Asc), createdAt (Desc)
+//    If missing, Firestore prints a direct link to create it in the debug
+//    console the first time GroupTasksScreen runs — just click it.
+// 3. Wire in entry points:
+//    MyTasksScreen(currentUser: currentUser)
+//    GroupTasksScreen(group: group, currentUser: currentUser)
+// 4. Firestore security rules — add to firestore.rules:
+//
+// match /tasks/{taskId} {
+//   allow read: if isOwner() || isAssignee() || isGroupMember();
+//   allow create: if request.auth != null &&
+//                    request.resource.data.creatorUid == request.auth.uid;
+//   allow update, delete: if isOwner() || isGroupAdmin();
+//   allow update: if isAssignee() &&
+//     request.resource.data.diff(resource.data).affectedKeys()
+//       .hasOnly(['status', 'subtasks', 'completedAt', 'completedBy']);
+//
+//   function isOwner() {
+//     return request.auth != null && resource.data.creatorUid == request.auth.uid;
+//   }
+//   function isAssignee() {
+//     return request.auth != null && resource.data.assignedTo is list &&
+//            request.auth.uid in resource.data.assignedTo;
+//   }
+//   function isGroupMember() {
+//     return resource.data.type == 'group' && request.auth != null &&
+//            request.auth.uid in get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.members;
+//   }
+//   function isGroupAdmin() {
+//     return resource.data.type == 'group' && request.auth != null &&
+//            get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.adminUid == request.auth.uid;
+//   }
+// }
+//
+// 5. Not implemented (as scoped): push notifications for due dates,
+//    recurring tasks, kanban view. Group tasks with no explicit assignee
+//    default to the whole group (see _CreateTaskSheet._save in tasks_ui.dart).
+//
+// ASSIGNMENTS
+// 6. Assignments live under groups/{groupId}/assignments/{assignmentId}
+//    (and a comments subcollection under each assignment). This is a
+//    separate concept from `tasks` — Assignments are group-wide items
+//    where every member tracks their OWN completion via memberCompletion,
+//    while Tasks are individually assignable to specific member(s).
+//    Security rules for `assignments` and its `comments` subcollection
+//    aren't included above — add rules gated on group membership
+//    (mirror the isGroupMember()/isGroupAdmin() pattern from the tasks
+//    rules, but scoped to the groups/{groupId} path instead of a top-level
+//    collection field lookup).
  

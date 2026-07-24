@@ -17,7 +17,6 @@ import 'chats_screen.dart';
 import 'friend_requests_screen.dart';
 import 'study_screen.dart';
 
-
 class HomeScreen extends StatefulWidget {
   final User user;
   const HomeScreen({super.key, required this.user});
@@ -61,6 +60,19 @@ class _HomeScreenState extends State<HomeScreen> {
         final currentUser = userSnapshot.data;
 
         if (userSnapshot.connectionState == ConnectionState.waiting && currentUser == null) {
+          return const Scaffold(
+            backgroundColor: CipherColors.background,
+            body: Center(
+              child: CircularProgressIndicator(color: CipherColors.primary),
+            ),
+          );
+        }
+
+        // Guard: some tabs (StudyScreen, GroupsScreen, ProfileScreen, ChatsScreen)
+        // need a non-null AppUser. If the stream hasn't delivered one yet
+        // (e.g. right after this branch on a slow connection), show a loader
+        // instead of passing a nullable value into a non-nullable parameter.
+        if (currentUser == null) {
           return const Scaffold(
             backgroundColor: CipherColors.background,
             body: Center(
@@ -127,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildHomeTab(currentUser),
               GroupsScreen(currentUser: currentUser, user: widget.user),
               ChatsScreen(user: widget.user, currentUser: currentUser),
-              StudyScreen(currentUid: currentUser?.uid ?? ''),
+              StudyScreen(currentUser: currentUser),
               ProfileScreen(currentUser: currentUser),
             ],
           ),
@@ -144,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   backgroundColor: CipherColors.primary,
                   icon: const Icon(Icons.add_rounded, color: Colors.white),
                   label: Text(
-                    'Create Group', 
+                    'Create Group',
                     style: CipherTextStyles.poppins(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 )
@@ -287,8 +299,6 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 16),
             _buildMyGroupsSection(currentUser),
             const SizedBox(height: 16),
-            // _buildTodayTasksSection(),
-            const SizedBox(height: 16),
             _buildAIAssistantBanner(context),
             const SizedBox(height: 24),
           ],
@@ -329,7 +339,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Text(
                       "$greetingTime,",
-                      style: CipherTextStyles.poppins(fontSize: 14, color: Colors.white, alpha: 0.9),
+                      style: CipherTextStyles.poppins(fontSize: 14, color: Colors.white.withValues(alpha: 0.9)),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -341,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 4),
                     Text(
                       "Your learning dashboard is ready",
-                      style: CipherTextStyles.poppins(fontSize: 13, color: Colors.white, alpha: 0.7),
+                      style: CipherTextStyles.poppins(fontSize: 13, color: Colors.white.withValues(alpha: 0.7)),
                     ),
                   ],
                 ),
@@ -364,7 +374,23 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Divider(color: Colors.white24, height: 1),
           ),
           Row(
-            
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.local_fire_department_rounded, color: Colors.amberAccent, size: 20),
+                  const SizedBox(width: 6),
+                  Text(
+                    "3 Day Streak!",
+                    style: CipherTextStyles.poppins(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ],
+              ),
+              Text(
+                "Keep it up ✨",
+                style: CipherTextStyles.poppins(fontSize: 12, color: Colors.white.withValues(alpha: 0.8)),
+              ),
+            ],
           )
         ],
       ),
@@ -388,7 +414,15 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         return Row(
-         
+          children: [
+            Expanded(child: _buildStatItem(Icons.groups_rounded, "$groupCount", "Groups", CipherColors.primary)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildStatItem(Icons.people_rounded, "$friendCount", "Friends", CipherColors.secondary)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildStatItem(Icons.bolt_rounded, "$xpCount", "XP Points", CipherColors.pink)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildStatItem(Icons.timer_rounded, studyTime, "Studied", CipherColors.blue)),
+          ],
         );
       },
     );
@@ -616,100 +650,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget _buildTodayTasksSection() {
-  //   return Column(
-  //     children: [
-  //       Row(
-  //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //         children: [
-  //           Row(
-  //             children: [
-  //               Text("Today's Tasks", style: CipherTextStyles.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
-  //               const SizedBox(width: 8),
-  //               Container(
-  //                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-  //                 decoration: BoxDecoration(color: CipherColors.primaryLight, borderRadius: BorderRadius.circular(10)),
-  //                 child: Text("3", style: CipherTextStyles.poppins(fontSize: 11, fontWeight: FontWeight.bold, color: CipherColors.primary)),
-  //               )
-  //             ],
-  //           ),
-  //           GestureDetector(
-  //             onTap: () => setState(() => _selectedIndex = 3),
-  //             child: Text("See All", style: CipherTextStyles.poppins(fontSize: 13, color: CipherColors.primary, fontWeight: FontWeight.w600)),
-  //           )
-  //         ],
-  //       ),
-  //       const SizedBox(height: 12),
-  //       StreamBuilder<QuerySnapshot>(
-  //         stream: FirebaseFirestore.instance.collection('tasks').limit(3).snapshots(),
-  //         builder: (context, snapshot) {
-  //           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-  //             return Container(
-  //               width: double.infinity,
-  //               padding: const EdgeInsets.all(16),
-  //               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-  //               child: Column(
-  //                 children: [
-  //                   Text("No tasks today 🎉", style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: CipherColors.textSecondary)),
-  //                   Text("You are all caught up!", style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary)),
-  //                 ],
-  //               ),
-  //             );
-  //           }
-
-  //           final tasks = snapshot.data!.docs;
-  //           return ListView.builder(
-  //             shrinkWrap: true,
-  //             padding: EdgeInsets.zero,
-  //             physics: const NeverScrollableScrollPhysics(),
-  //             itemCount: tasks.length,
-  //             itemBuilder: (context, idx) {
-  //               final data = tasks[idx].data() as Map<String, dynamic>;
-  //               final title = data['title'] ?? 'Review lecture notes';
-  //               final groupName = data['groupName'] ?? 'General Space';
-  //               final priority = data['priority'] ?? 'medium';
-
-  //               Color dotColor = Colors.green;
-  //               if (priority == 'high') dotColor = Colors.red;
-  //               if (priority == 'medium') dotColor = Colors.amber;
-
-  //               return Container(
-  //                 margin: const EdgeInsets.only(bottom: 8),
-  //                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-  //                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-  //                 child: Row(
-  //                   children: [
-  //                     Container(width: 8, height: 8, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
-  //                     const SizedBox(width: 14),
-  //                     Expanded(
-  //                       child: Column(
-  //                         crossAxisAlignment: CrossAxisAlignment.start,
-  //                         children: [
-  //                           Text(title, style: CipherTextStyles.poppins(fontSize: 13, fontWeight: FontWeight.bold)),
-  //                           Text(groupName, style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary)),
-  //                         ],
-  //                       ),
-  //                     ),
-  //                     Text("5:00 PM", style: CipherTextStyles.poppins(fontSize: 11, color: CipherColors.textSecondary)),
-  //                     const SizedBox(width: 12),
-  //                     const Icon(Icons.radio_button_unchecked_rounded, color: CipherColors.border, size: 20)
-  //                   ],
-  //                 ),
-  //               );
-  //             },
-  //           );
-  //         },
-  //       )
-  //     ],
-  //   );
-  // }
-
   Widget _buildAIAssistantBanner(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // 🌟 FIXED: Passed the required 'currentUid' named parameter to constructor
         Navigator.push(
-          context, 
+          context,
           MaterialPageRoute(
             builder: (context) => AiAssistantScreen(currentUid: widget.user.uid),
           ),

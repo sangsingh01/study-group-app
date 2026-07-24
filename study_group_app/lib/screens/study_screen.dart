@@ -1,16 +1,16 @@
 // lib/screens/study_screen.dart
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../constants/design_system.dart';
+import '../models/user_model.dart'; // Ensure correct path to your AppUser model
 import 'notes_screen.dart';
-import 'task_screen.dart';
+import 'tasks_ui.dart';
 import 'quiz_screen.dart';
 import 'ai_assistant_screen.dart';
 
 class StudyScreen extends StatefulWidget {
-  final String currentUid; // 🌟 Passed from your authenticated root tab controller
-  const StudyScreen({super.key, required this.currentUid});
+  final AppUser currentUser; // Updated to pass full AppUser object
+  
+  const StudyScreen({super.key, required this.currentUser});
 
   @override
   State<StudyScreen> createState() => _StudyScreenState();
@@ -35,14 +35,6 @@ class _StudyScreenState extends State<StudyScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildFeatureGrid(),
-                  const SizedBox(height: 24),
-                  
-                  const SizedBox(height: 24),
-                  
-                  const SizedBox(height: 24),
-                  
-                  const SizedBox(height: 24),
-                  
                   const SizedBox(height: 24),
                   _buildQuickAiAccessCard(),
                   const SizedBox(height: 40), // Safe spacing for navigation padding
@@ -114,7 +106,10 @@ class _StudyScreenState extends State<StudyScreen> {
           sub: "12 shared files",
           titleColor: CipherColors.notesText,
           subColor: CipherColors.notesSub,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotesScreen(currentUid: widget.currentUid))),
+          onTap: () => Navigator.push(
+            context, 
+            MaterialPageRoute(builder: (_) => NotesScreen(currentUid: widget.currentUser.uid))
+          ),
         ),
         _buildGridCard(
           bg: CipherColors.tasksBg,
@@ -125,7 +120,12 @@ class _StudyScreenState extends State<StudyScreen> {
           sub: "3 due today",
           titleColor: CipherColors.tasksText,
           subColor: CipherColors.tasksSub,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TaskScreen(currentUid: widget.currentUid))),
+          onTap: () => Navigator.push(
+            context, 
+            MaterialPageRoute(
+              builder: (_) => MyTasksScreen(currentUser: widget.currentUser),
+            ),
+          ),
         ),
         _buildGridCard(
           bg: CipherColors.quizBg,
@@ -136,7 +136,10 @@ class _StudyScreenState extends State<StudyScreen> {
           sub: "2 items pending",
           titleColor: CipherColors.quizText,
           subColor: CipherColors.quizSub,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => QuizListScreen(currentUid: widget.currentUid))),
+          onTap: () => Navigator.push(
+            context, 
+            MaterialPageRoute(builder: (_) => QuizListScreen(currentUid: widget.currentUser.uid))
+          ),
         ),
         _buildGridCard(
           bg: CipherColors.aiBg,
@@ -147,15 +150,25 @@ class _StudyScreenState extends State<StudyScreen> {
           sub: "Ask anything",
           titleColor: CipherColors.aiText,
           subColor: CipherColors.aiSub,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AiAssistantScreen(currentUid: widget.currentUid))),
+          onTap: () => Navigator.push(
+            context, 
+            MaterialPageRoute(builder: (_) => AiAssistantScreen(currentUid: widget.currentUser.uid))
+          ),
         ),
       ],
     );
   }
 
   Widget _buildGridCard({
-    required Color bg, required Color iconBg, required Color iconColor, required IconData icon,
-    required String title, required String sub, required Color titleColor, required Color subColor, required VoidCallback onTap
+    required Color bg, 
+    required Color iconBg, 
+    required Color iconColor, 
+    required IconData icon,
+    required String title, 
+    required String sub, 
+    required Color titleColor, 
+    required Color subColor, 
+    required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -192,51 +205,14 @@ class _StudyScreenState extends State<StudyScreen> {
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ANALYTICS & CHARTS SECTION
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━
-  
-  
-
- 
-
-  
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━
-  // QUICK STATUS ROW (4 CARDS)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━
- 
-
-  Widget _buildStatCard(String label, String value, IconData icon, Color bg, Color color) {
-    return Container(
-      width: (MediaQuery.of(context).size.width - 64) / 4,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 4),
-          Text(value, style: CipherTextStyles.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
-          Text(label, style: CipherTextStyles.poppins(fontSize: 9, color: Colors.grey[600]!, fontWeight: FontWeight.w500)),
-        ],
-      ),
-    );
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━
-  // UPCOMING DEADLINES SECTION
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━
- 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━
-  // TODAY'S GOALS GOAL METRICS
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━
- 
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━
   // QUICK AI ASSISTANT OVERLAY CARD
   // ━━━━━━━━━━━━━━━━━━━━━━━━━
   Widget _buildQuickAiAccessCard() {
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AiAssistantScreen(currentUid: widget.currentUid))),
+      onTap: () => Navigator.push(
+        context, 
+        MaterialPageRoute(builder: (_) => AiAssistantScreen(currentUid: widget.currentUser.uid))
+      ),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
