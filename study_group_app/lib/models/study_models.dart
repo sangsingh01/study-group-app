@@ -140,68 +140,73 @@ class NoteModel {
       : DateTime.now(),
   starredBy: List<String>.from(map['starredBy'] ?? []),
 );
-}
-class QuizModel {
+}class QuizModel {
   final String id;
+  final String groupId;
   final String title;
   final String createdBy;
   final DateTime createdAt;
   final int timeLimitMinutes;
   final List<QuestionModel> questions;
- 
+
   QuizModel({
     required this.id,
+    required this.groupId,
     required this.title,
     required this.createdBy,
     required this.createdAt,
     required this.timeLimitMinutes,
     required this.questions,
   });
- 
+
   Map<String, dynamic> toMap() => {
     'id': id,
+    'groupId': groupId,
     'title': title,
     'createdBy': createdBy,
     'createdAt': Timestamp.fromDate(createdAt),
     'timeLimitMinutes': timeLimitMinutes,
     'questions': questions.map((q) => q.toMap()).toList(),
   };
- 
+
   factory QuizModel.fromMap(Map<String, dynamic> map) => QuizModel(
     id: map['id'] ?? '',
+    groupId: map['groupId'] ?? '',
     title: map['title'] ?? '',
     createdBy: map['createdBy'] ?? '',
     createdAt: (map['createdAt'] as Timestamp).toDate(),
     timeLimitMinutes: map['timeLimitMinutes'] ?? 10,
-    questions: (map['questions'] as List? ?? []).map((q) => QuestionModel.fromMap(q)).toList(),
+    questions: (map['questions'] as List? ?? [])
+        .map((q) => QuestionModel.fromMap(q))
+        .toList(),
   );
 }
- 
+
 class QuestionModel {
+  final String id;
   final String questionText;
   final List<String> options;
   final int correctOptionIndex;
-  final String? imageUrl;
- 
+
   QuestionModel({
+    required this.id,
     required this.questionText,
     required this.options,
     required this.correctOptionIndex,
-    this.imageUrl,
   });
- 
+
   Map<String, dynamic> toMap() => {
+    'id': id,
     'questionText': questionText,
     'options': options,
     'correctOptionIndex': correctOptionIndex,
-    'imageUrl': imageUrl,
   };
- 
+
   factory QuestionModel.fromMap(Map<String, dynamic> map) => QuestionModel(
+    id: map['id'] ?? '',
     questionText: map['questionText'] ?? '',
     options: List<String>.from(map['options'] ?? []),
     correctOptionIndex: map['correctOptionIndex'] ?? 0,
-    imageUrl: map['imageUrl'],
   );
 }
  

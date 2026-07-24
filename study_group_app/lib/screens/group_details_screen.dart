@@ -8,6 +8,7 @@ import '../screens/group_chat_screen.dart';
 import '../services/database_service.dart';
 import '../widgets/add_members_bottom_sheet.dart';
 import 'tasks_ui.dart';
+import 'quiz_screen.dart';
  
 class GroupDetailsScreen extends StatefulWidget {
   final GroupModel group;
@@ -452,17 +453,21 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                           Row(
                             children: [
                               _buildActionTile(
-                                Icons.quiz_rounded,
-                                'Quiz',
-                                const Color(0xFFFF6584),
-                                () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Quiz module coming soon!'),
-                                    ),
-                                  );
-                                },
-                              ),
+  Icons.quiz_rounded,
+  'Quiz',
+  const Color(0xFFFF6584),
+  () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GroupQuizListScreen(
+          group: group,
+          currentUser: widget.currentUser,
+        ),
+      ),
+    );
+  },
+),
                               const SizedBox(width: 12),
                               const Expanded(child: SizedBox()),
                             ],
