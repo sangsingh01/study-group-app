@@ -1,9 +1,4 @@
-//Here is the updated code for `lib/screens/study_screen.dart`.
-
-//The navigation in `_buildQuickAiAccessCard()` and the 2x2 grid tile for **AI Assistant** have both been updated to navigate to `AiChatScreen()` as requested.
-
-//```dart
-// lib/screens/study_screen.dart
+//
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../constants/design_system.dart';
@@ -15,6 +10,7 @@ import 'quiz_screen.dart';
 import 'ai_assistant_screen.dart';
 import 'study_timer_screen.dart';
 import 'ai_chat_screen.dart';
+
 class StudyScreen extends StatefulWidget {
   final AppUser currentUser; // Updated to pass full AppUser object
 
@@ -32,7 +28,7 @@ class _StudyScreenState extends State<StudyScreen> {
   void _openGroupSelectorForQuiz(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF1E293B),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -48,7 +44,7 @@ class _StudyScreenState extends State<StudyScreen> {
                 style: CipherTextStyles.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Colors.white,
                 ),
               ),
               const SizedBox(height: 6),
@@ -56,7 +52,7 @@ class _StudyScreenState extends State<StudyScreen> {
                 'Choose a study group to view or create quizzes.',
                 style: CipherTextStyles.poppins(
                   fontSize: 12,
-                  color: Colors.grey[600]!,
+                  color: Colors.grey[400]!,
                 ),
               ),
               const SizedBox(height: 16),
@@ -79,7 +75,7 @@ class _StudyScreenState extends State<StudyScreen> {
                         padding: const EdgeInsets.all(16.0),
                         child: Text(
                           'Error loading groups.',
-                          style: CipherTextStyles.poppins(color: Colors.red),
+                          style: CipherTextStyles.poppins(color: Colors.redAccent),
                         ),
                       );
                     }
@@ -88,7 +84,7 @@ class _StudyScreenState extends State<StudyScreen> {
                         padding: const EdgeInsets.all(16.0),
                         child: Text(
                           'You are not a member of any study groups yet.',
-                          style: CipherTextStyles.poppins(color: Colors.grey),
+                          style: CipherTextStyles.poppins(color: Colors.grey[400]!),
                         ),
                       );
                     }
@@ -104,7 +100,7 @@ class _StudyScreenState extends State<StudyScreen> {
                     return ListView.separated(
                       shrinkWrap: true,
                       itemCount: groups.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFF334155)),
                       itemBuilder: (context, index) {
                         final group = groups[index];
                         return ListTile(
@@ -113,7 +109,7 @@ class _StudyScreenState extends State<StudyScreen> {
                             vertical: 4,
                           ),
                           leading: CircleAvatar(
-                            backgroundColor: CipherColors.quizBg,
+                            backgroundColor: const Color(0xFF064E3B),
                             child: Icon(
                               Icons.groups_rounded,
                               color: CipherColors.greenPrimary,
@@ -124,13 +120,14 @@ class _StudyScreenState extends State<StudyScreen> {
                             style: CipherTextStyles.poppins(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
+                              color: Colors.white,
                             ),
                           ),
                           subtitle: Text(
                             '${group.members.length} members',
                             style: CipherTextStyles.poppins(
                               fontSize: 12,
-                              color: Colors.grey,
+                              color: Colors.grey[400]!,
                             ),
                           ),
                           trailing: const Icon(
@@ -167,7 +164,7 @@ class _StudyScreenState extends State<StudyScreen> {
   void _openGroupSelectorForTimer(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF1E293B),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -183,7 +180,7 @@ class _StudyScreenState extends State<StudyScreen> {
                 style: CipherTextStyles.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Colors.white,
                 ),
               ),
               const SizedBox(height: 6),
@@ -191,7 +188,7 @@ class _StudyScreenState extends State<StudyScreen> {
                 'Choose which group this study session counts toward.',
                 style: CipherTextStyles.poppins(
                   fontSize: 12,
-                  color: Colors.grey[600]!,
+                  color: Colors.grey[400]!,
                 ),
               ),
               const SizedBox(height: 16),
@@ -214,7 +211,7 @@ class _StudyScreenState extends State<StudyScreen> {
                         padding: const EdgeInsets.all(16.0),
                         child: Text(
                           'Error loading groups.',
-                          style: CipherTextStyles.poppins(color: Colors.red),
+                          style: CipherTextStyles.poppins(color: Colors.redAccent),
                         ),
                       );
                     }
@@ -223,7 +220,7 @@ class _StudyScreenState extends State<StudyScreen> {
                         padding: const EdgeInsets.all(16.0),
                         child: Text(
                           'You are not a member of any study groups yet.',
-                          style: CipherTextStyles.poppins(color: Colors.grey),
+                          style: CipherTextStyles.poppins(color: Colors.grey[400]!),
                         ),
                       );
                     }
@@ -239,7 +236,7 @@ class _StudyScreenState extends State<StudyScreen> {
                     return ListView.separated(
                       shrinkWrap: true,
                       itemCount: groups.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFF334155)),
                       itemBuilder: (context, index) {
                         final group = groups[index];
                         return ListTile(
@@ -248,7 +245,7 @@ class _StudyScreenState extends State<StudyScreen> {
                             vertical: 4,
                           ),
                           leading: CircleAvatar(
-                            backgroundColor: CipherColors.tasksBg,
+                            backgroundColor: const Color(0xFF831843),
                             child: Icon(
                               Icons.timer_rounded,
                               color: CipherColors.pinkPrimary,
@@ -259,13 +256,14 @@ class _StudyScreenState extends State<StudyScreen> {
                             style: CipherTextStyles.poppins(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
+                              color: Colors.white,
                             ),
                           ),
                           subtitle: Text(
                             '${group.members.length} members',
                             style: CipherTextStyles.poppins(
                               fontSize: 12,
-                              color: Colors.grey,
+                              color: Colors.grey[400]!,
                             ),
                           ),
                           trailing: const Icon(
@@ -301,7 +299,7 @@ class _StudyScreenState extends State<StudyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CipherColors.background,
+      backgroundColor: const Color(0xFF0F172A),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Column(
@@ -339,14 +337,14 @@ class _StudyScreenState extends State<StudyScreen> {
       width: double.infinity,
       padding: const EdgeInsets.only(top: 64, left: 20, right: 20, bottom: 32),
       decoration: const BoxDecoration(
-        gradient: CipherColors.headerGradient,
+        color: Color(0xFF1E293B),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(24),
           bottomRight: Radius.circular(24),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
+            color: Colors.black26,
             blurRadius: 10,
             offset: Offset(0, 4),
           )
@@ -368,7 +366,7 @@ class _StudyScreenState extends State<StudyScreen> {
             'All your learning in one place',
             style: CipherTextStyles.poppins(
               fontSize: 13,
-              color: Colors.white.withValues(alpha: 0.8),
+              color: Colors.grey[400]!,
             ),
           ),
         ],
@@ -389,14 +387,14 @@ class _StudyScreenState extends State<StudyScreen> {
       childAspectRatio: 1.35,
       children: [
         _buildGridCard(
-          bg: CipherColors.notesBg,
-          iconBg: Colors.white,
-          iconColor: CipherColors.purplePrimary,
+          bg: const Color(0xFF1E1B4B),
+          iconBg: const Color(0xFF334155),
+          iconColor: const Color(0xFFA855F7),
           icon: Icons.folder_copy_rounded,
           title: "Notes",
           sub: " share files",
-          titleColor: CipherColors.notesText,
-          subColor: CipherColors.notesSub,
+          titleColor: Colors.white,
+          subColor: Colors.grey[400]!,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -405,14 +403,14 @@ class _StudyScreenState extends State<StudyScreen> {
           ),
         ),
         _buildGridCard(
-          bg: CipherColors.tasksBg,
-          iconBg: Colors.white,
-          iconColor: CipherColors.pinkPrimary,
+          bg: const Color.fromARGB(255, 203, 103, 143),
+          iconBg: const Color(0xFF334155),
+          iconColor: const Color(0xFFEC4899),
           icon: Icons.check_box_rounded,
           title: "Tasks",
           sub: "make your tasks complete",
-          titleColor: CipherColors.tasksText,
-          subColor: CipherColors.tasksSub,
+          titleColor: Colors.white,
+          subColor: Colors.grey[400]!,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -421,25 +419,25 @@ class _StudyScreenState extends State<StudyScreen> {
           ),
         ),
         _buildGridCard(
-          bg: CipherColors.quizBg,
-          iconBg: Colors.white,
-          iconColor: CipherColors.greenPrimary,
+          bg: const Color.fromARGB(255, 179, 175, 93),
+          iconBg: const Color(0xFF334155),
+          iconColor: const Color(0xFF10B981),
           icon: Icons.help_center_rounded,
           title: "Quiz",
           sub: "play and learn",
-          titleColor: CipherColors.quizText,
-          subColor: CipherColors.quizSub,
+          titleColor: Colors.white,
+          subColor: Colors.grey[400]!,
           onTap: () => _openGroupSelectorForQuiz(context),
         ),
         _buildGridCard(
-          bg: CipherColors.aiBg,
-          iconBg: Colors.white,
-          iconColor: CipherColors.orangePrimary,
+          bg: const Color.fromARGB(255, 152, 200, 212),
+          iconBg: const Color(0xFF334155),
+          iconColor: const Color(0xFFF97316),
           icon: Icons.adb_rounded,
           title: "AI Assistant",
           sub: "Ask anything",
-          titleColor: CipherColors.aiText,
-          subColor: CipherColors.aiSub,
+          titleColor: Colors.white,
+          subColor: Colors.grey[400]!,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -469,9 +467,10 @@ class _StudyScreenState extends State<StudyScreen> {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF334155)),
           boxShadow: const [
             BoxShadow(
-              color: Colors.black12,
+              color: Colors.black26,
               blurRadius: 4,
               offset: Offset(0, 2),
             )
@@ -537,8 +536,9 @@ class _StudyScreenState extends State<StudyScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: CipherColors.purpleGradient,
+          color: const Color(0xFF1E293B),
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.5)),
           boxShadow: const [
             BoxShadow(
               color: Colors.black26,
@@ -549,7 +549,7 @@ class _StudyScreenState extends State<StudyScreen> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.psychology_rounded, color: Colors.white, size: 32),
+            const Icon(Icons.psychology_rounded, color: Color(0xFF38BDF8), size: 32),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -568,7 +568,7 @@ class _StudyScreenState extends State<StudyScreen> {
                     'Get instant answers to any question',
                     style: CipherTextStyles.poppins(
                       fontSize: 11,
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: Colors.grey[400]!,
                     ),
                   ),
                 ],
@@ -594,8 +594,9 @@ class _StudyScreenState extends State<StudyScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: CipherColors.headerGradient,
+          color: const Color(0xFF1E293B),
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF334155)),
           boxShadow: const [
             BoxShadow(
               color: Colors.black26,
@@ -606,7 +607,7 @@ class _StudyScreenState extends State<StudyScreen> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.timer_rounded, color: Colors.white, size: 32),
+            const Icon(Icons.timer_rounded, color: Color(0xFFEC4899), size: 32),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -625,7 +626,7 @@ class _StudyScreenState extends State<StudyScreen> {
                     'Track your study time and build a streak',
                     style: CipherTextStyles.poppins(
                       fontSize: 11,
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: Colors.grey[400]!,
                     ),
                   ),
                 ],

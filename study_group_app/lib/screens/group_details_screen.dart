@@ -421,7 +421,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
-                                        'Notes feature coming soon!',
+                                        'This feature is implemented inside the chat!',
                                       ),
                                     ),
                                   );

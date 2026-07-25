@@ -7,30 +7,27 @@ import '../models/user_model.dart';
 import '../screens/group_details_screen.dart';
 import '../services/database_service.dart';
  
-// Same family as the palette used on the home tab — indigo as the single
-// brand color, plus a small rotating accent set for group identity. Kept
-// local to this file for now; worth promoting to design_system.dart once
-// it's settled across the app.
+// Dark mode palette matching the dark home tab aesthetic.
 class _Palette {
-  static const paper = Color(0xFFF6F5F2);
-  static const ink = Color(0xFF232338);
-  static const inkSoft = Color(0xFF74748C);
-  static const card = Color(0xFFFFFFFF);
-  static const hairline = Color(0xFFE7E6EF);
+  static const paper = Color(0xFF12121A);
+  static const ink = Colors.white;
+  static const inkSoft = Color(0xFF9CA3AF);
+  static const card = Color(0xFF1E1E2C);
+  static const hairline = Color(0xFF2A2A3D);
  
-  static const indigo = Color(0xFF4E4AC7);
-  static const indigoDeep = Color(0xFF3A3798);
+  static const indigo = Color(0xFF6C63FF);
+  static const indigoDeep = Color(0xFF5B52E0);
   static const amber = Color(0xFFF2A33D);
-  static const amberSoft = Color(0xFFFBE7C6);
+  static const amberSoft = Color(0xFF382A1B);
   static const teal = Color(0xFF1FA98C);
-  static const tealSoft = Color(0xFFD3EEE7);
+  static const tealSoft = Color(0xFF163833);
   static const coral = Color(0xFFEB6F5C);
-  static const coralSoft = Color(0xFFFBE0DA);
+  static const coralSoft = Color(0xFF382022);
   static const plum = Color(0xFFB4519C);
-  static const plumSoft = Color(0xFFF1DCEC);
+  static const plumSoft = Color(0xFF331E30);
  
   static const accents = [indigo, teal, coral, plum, amber];
-  static const accentsSoft = [Color(0xFFE4E3F7), tealSoft, coralSoft, plumSoft, amberSoft];
+  static const accentsSoft = [Color(0xFF28264C), tealSoft, coralSoft, plumSoft, amberSoft];
 }
  
 class GroupsScreen extends StatefulWidget {
@@ -113,7 +110,6 @@ class _GroupsScreenState extends State<GroupsScreen> {
                   unselectedLabelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
                   tabs: const [
                     Tab(height: 38, text: 'My Groups'),
-                    
                   ],
                 ),
               ),
@@ -219,7 +215,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: _Palette.hairline),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 14, offset: const Offset(0, 6)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 14, offset: const Offset(0, 6)),
         ],
       ),
       child: Column(
@@ -229,7 +225,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: _Palette.indigo.withValues(alpha: 0.1),
+              color: _Palette.indigo.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(13),
             ),
             child: Icon(icon, color: _Palette.indigo, size: 22),
@@ -280,7 +276,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: _Palette.hairline),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, 8)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 16, offset: const Offset(0, 8)),
         ],
       ),
       child: Material(
@@ -375,7 +371,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                         decoration: BoxDecoration(
-                          color: _Palette.teal.withValues(alpha: 0.1),
+                          color: _Palette.teal.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(30),
                         ),
                         child: Row(
@@ -417,4 +413,3 @@ class _GroupsScreenState extends State<GroupsScreen> {
     );
   }
 }
- 

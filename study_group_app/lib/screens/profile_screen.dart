@@ -26,18 +26,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Bio'),
+        backgroundColor: const Color(0xFF1E1E2C),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Edit Bio',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
         content: TextField(
           controller: controller,
           maxLines: 4,
-          decoration: const InputDecoration(
-            hintText: 'Write something about yourself',
+          style: GoogleFonts.poppins(fontSize: 14, color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Write something about yourself...',
+            hintStyle: GoogleFonts.poppins(color: const Color(0xFF9CA3AF)),
+            filled: true,
+            fillColor: const Color(0xFF2A2A3D),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: const Color(0xFF9CA3AF)),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -48,7 +67,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               });
               Navigator.of(context).pop();
             },
-            child: const Text('Save'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6C63FF),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Save',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),
@@ -60,6 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await FirebaseAuth.instance.signOut();
     await GoogleSignIn().signOut();
     await GoogleSignIn().disconnect();
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
@@ -70,9 +102,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF1E1E2C),
       isScrollControlled: true,
       builder: (context) {
         return Padding(
@@ -86,33 +118,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 60,
+                height: 60,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFFFE5E5),
+                  color: Color(0xFF3A1E28),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.warning_amber_rounded,
                   color: Color(0xFFFF4757),
-                  size: 32,
+                  size: 34,
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
               Text(
                 'Logout?',
                 style: GoogleFonts.poppins(
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.w700,
+                  color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Text(
-                'You will need to sign in again',
+                'Are you sure you want to log out of your account?',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
                   fontSize: 14,
-                  color: const Color(0xFF6B7280),
+                  color: const Color(0xFF9CA3AF),
                 ),
               ),
               const SizedBox(height: 24),
@@ -122,7 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFF9CA3AF)),
+                        side: const BorderSide(color: Color(0xFF2A2A3D)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -133,24 +166,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF4B5563),
+                          color: const Color(0xFFD1D5DB),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: GestureDetector(
                       onTap: _performLogout,
                       child: Container(
-                        height: 54,
+                        height: 52,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFFFF6B6B), Color(0xFFFF4757)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF4757).withAlpha(76),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: Center(
                           child: Text(
@@ -167,7 +205,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
             ],
           ),
         );
@@ -175,50 +213,350 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatCard(
-    Color iconColor,
-    IconData icon,
-    String value,
-    String label,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(15),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
+  @override
+  Widget build(BuildContext context) {
+    final user = widget.currentUser;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF12121A),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- HEADER SECTION ---
+              _buildHeader(user),
+
+              const SizedBox(height: 20),
+
+              // --- STATS OVERVIEW ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: StreamBuilder<List<GroupModel>>(
+                        stream: user != null
+                            ? _databaseService.getMyGroups(user.uid)
+                            : Stream<List<GroupModel>>.value([]),
+                        builder: (context, snapshot) {
+                          final count = snapshot.data?.length ?? 0;
+                          return _buildStatTile(
+                            icon: Icons.groups_rounded,
+                            color: const Color(0xFF6C63FF),
+                            value: '$count',
+                            label: 'Groups',
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildStatTile(
+                        icon: Icons.people_alt_rounded,
+                        color: const Color(0xFFFF6584),
+                        value: '${user?.friends.length ?? 0}',
+                        label: 'Friends',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // --- BIO & DETAILS CARD ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E2C),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(25),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'About Me',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: _editBio,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF6C63FF).withAlpha(40),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'Edit Bio',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF8E7DFF),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _bio,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: const Color(0xFFD1D5DB),
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // --- ACTIVE GROUPS SUMMARY CARD ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: StreamBuilder<List<GroupModel>>(
+                  stream: user != null
+                      ? _databaseService.getMyGroups(user.uid)
+                      : Stream<List<GroupModel>>.value([]),
+                  builder: (context, snapshot) {
+                    final groupCount = snapshot.data?.length ?? 0;
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E1E2C),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(25),
+                            blurRadius: 14,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6C63FF).withAlpha(40),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(
+                              Icons.auto_stories_rounded,
+                              color: Color(0xFF8E7DFF),
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Study Groups',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '$groupCount active group${groupCount == 1 ? '' : 's'} joined',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: const Color(0xFF9CA3AF),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // --- LOGOUT BUTTON ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 48),
+                child: AnimatedScale(
+                  scale: _isLogoutPressed ? 0.96 : 1.0,
+                  duration: const Duration(milliseconds: 100),
+                  child: GestureDetector(
+                    onTapDown: (_) => setState(() => _isLogoutPressed = true),
+                    onTapUp: (_) {
+                      setState(() => _isLogoutPressed = false);
+                      _showLogoutSheet();
+                    },
+                    onTapCancel: () =>
+                        setState(() => _isLogoutPressed = false),
+                    child: Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF6B6B), Color(0xFFFF4757)],
+                        ),
+                        borderRadius: BorderRadius.circular(26),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFF6B6B).withAlpha(90),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.logout_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Logout',
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  // --- HEADER WIDGET ---
+  Widget _buildHeader(AppUser? user) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(36),
+          bottomRight: Radius.circular(36),
+        ),
+        gradient: LinearGradient(
+          colors: [Color(0xFF5B52E0), Color(0xFF7C6CFF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: iconColor.withAlpha(31),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: iconColor, size: 22),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'My Profile',
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              IconButton(
+                onPressed: () {},
+                icon: const Icon(Icons.settings_outlined, color: Colors.white),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.white24,
+                  shape: BoxShape.circle,
+                ),
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundColor: const Color(0xFF6C63FF),
+                  foregroundImage: user?.profileImage != null
+                      ? NetworkImage(user!.profileImage!)
+                      : null,
+                  child: user?.profileImage == null
+                      ? Text(
+                          user?.initials ?? 'U',
+                          style: GoogleFonts.poppins(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        )
+                      : null,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF1E1E2C),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.camera_alt_rounded,
+                  size: 16,
+                  color: Color(0xFF8E7DFF),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
           Text(
-            value,
+            user?.username ?? 'Learning Buddy',
             style: GoogleFonts.poppins(
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.w700,
+              color: Colors.white,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 2),
           Text(
-            label,
+            user?.email ?? 'you@example.com',
             style: GoogleFonts.poppins(
               fontSize: 13,
-              color: const Color(0xFF6B7280),
+              color: Colors.white.withAlpha(217),
             ),
           ),
         ],
@@ -226,357 +564,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final user = widget.currentUser;
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FE),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 28,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(32),
-                    bottomRight: Radius.circular(32),
-                  ),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF6C63FF), Color(0xFF8E7DFF)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(36),
-                      blurRadius: 24,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Profile',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Tap the edit button to update your bio',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  color: Colors.white.withAlpha(230),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor: Colors.white.withAlpha(56),
-                          child: const Icon(Icons.star, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 28),
-                    Stack(
-                      alignment: Alignment.bottomRight,
-                      children: [
-                        CircleAvatar(
-                          radius: 57,
-                          backgroundColor: const Color(0xFF7C72FF),
-                          foregroundImage: user?.profileImage != null
-                              ? NetworkImage(user!.profileImage!)
-                              : null,
-                          child: user?.profileImage == null
-                              ? Text(
-                                  user?.initials ?? 'U',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : null,
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withAlpha(36),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.edit,
-                            size: 18,
-                            color: Color(0xFF6C63FF),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      user?.username ?? 'Learning Buddy',
-                      style: GoogleFonts.poppins(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      user?.email ?? 'you@example.com',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.white.withAlpha(217),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: [
-                    SizedBox(
-                      width:
-                          (MediaQuery.of(context).size.width - 20 * 2 - 16) / 2,
-                      child: StreamBuilder<List<GroupModel>>(
-                        stream: user != null
-                            ? _databaseService.getMyGroups(user.uid)
-                            : Stream<List<GroupModel>>.value([]),
-                        builder: (context, groupSnapshot) {
-                          final groupsCount = groupSnapshot.data?.length ?? 0;
-                          return _buildStatCard(
-                            const Color(0xFF6C63FF),
-                            Icons.groups_rounded,
-                            '$groupsCount',
-                            'Groups',
-                          );
-                        },
-                      ),
-                    ),
-                    SizedBox(
-                      width:
-                          (MediaQuery.of(context).size.width - 20 * 2 - 16) / 2,
-                      child: _buildStatCard(
-                        const Color(0xFFFF6584),
-                        Icons.people_rounded,
-                        '${user?.friends.length ?? 0}',
-                        'Friends',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Activity Summary',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(15),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Groups Joined',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                '${user?.friends.length ?? 0} friends',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  color: const Color(0xFF6B7280),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          StreamBuilder<List<GroupModel>>(
-                            stream: user != null
-                                ? _databaseService.getMyGroups(user.uid)
-                                : Stream<List<GroupModel>>.value([]),
-                            builder: (context, snapshot) {
-                              final groupCount = snapshot.data?.length ?? 0;
-                              return Text(
-                                '$groupCount active study groups',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  color: const Color(0xFF6B7280),
-                                  height: 1.5,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(15),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Bio',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: _editBio,
-                                child: const Text('Edit'),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _bio,
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: const Color(0xFF4B5563),
-                              height: 1.6,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 48),
-                      child: AnimatedScale(
-                        scale: _isLogoutPressed ? 0.96 : 1.0,
-                        duration: const Duration(milliseconds: 100),
-                        child: GestureDetector(
-                          onTapDown: (_) =>
-                              setState(() => _isLogoutPressed = true),
-                          onTapUp: (_) {
-                            setState(() => _isLogoutPressed = false);
-                            _showLogoutSheet();
-                          },
-                          onTapCancel: () =>
-                              setState(() => _isLogoutPressed = false),
-                          child: Container(
-                            height: 54,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFFF6B6B), Color(0xFFFF4757)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(
-                                    0xFFFF6B6B,
-                                  ).withOpacity(0.4),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.logout_rounded,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  'Logout',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ],
+  // --- STAT TILE WIDGET ---
+  Widget _buildStatTile({
+    required IconData icon,
+    required Color color,
+    required String value,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E2C),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(25),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-        ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withAlpha(40),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: const Color(0xFF9CA3AF),
+            ),
+          ),
+        ],
       ),
     );
   }

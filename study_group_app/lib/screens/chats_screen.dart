@@ -9,6 +9,17 @@ import '../services/database_service.dart';
 import 'direct_message_screen.dart';
 import 'search_users_screen.dart';
 
+class _ModernPalette {
+  static const Color background = Color(0xFF0F172A);
+  static const Color surface = Color(0xFF1E293B);
+  static const Color surfaceLight = Color(0xFF334155);
+  static const Color primary = Color(0xFF6366F1);
+  static const Color accentNeon = Color(0xFF38BDF8);
+  static const Color textMain = Color(0xFFF8FAFC);
+  static const Color textMuted = Color(0xFF94A3B8);
+  static const Color stroke = Color(0xFF334155);
+}
+
 class ChatsScreen extends StatefulWidget {
   final AppUser? currentUser;
   final User user;
@@ -29,15 +40,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
   String _searchQuery = '';
 
   Color _getAvatarColor(String name) {
-    if (name.isEmpty) return const Color(0xFF6C63FF);
+    if (name.isEmpty) return _ModernPalette.primary;
     final colors = [
-      Colors.red,
-      Colors.pink,
-      Colors.green,
-      Colors.blue,
-      Colors.orange,
-      Colors.purple,
-      Colors.teal,
+      Colors.redAccent,
+      Colors.pinkAccent,
+      Colors.greenAccent,
+      Colors.blueAccent,
+      Colors.orangeAccent,
+      Colors.purpleAccent,
+      Colors.tealAccent,
     ];
     return colors[name.trim().length % colors.length];
   }
@@ -46,6 +57,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _navigateToSearchUsers(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SearchUsersScreen(currentUid: widget.user.uid),
+      ),
+    );
   }
 
   String _formatTime(DateTime dateTime) {
@@ -74,19 +94,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: _ModernPalette.background,
       body: SafeArea(
         child: Column(
           children: [
             Container(
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF4C86FF),
-                    Color(0xFF6C63FF),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                color: _ModernPalette.surface,
+                border: Border(
+                  bottom: BorderSide(color: _ModernPalette.stroke),
                 ),
               ),
               padding: const EdgeInsets.all(16),
@@ -101,22 +117,53 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         children: [
                           Text(
                             'Messages',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: _ModernPalette.textMain,
                             ),
                           ),
                           Text(
                             'Private chats with friends',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
-                       color: Colors.black.withValues(alpha: 0.1),
+                              color: _ModernPalette.textMuted,
                             ),
                           ),
                         ],
                       ),
-                      const Icon(Icons.edit_note_rounded, color: Colors.white, size: 28),
+                      InkWell(
+                        onTap: () => _navigateToSearchUsers(context),
+                        borderRadius: BorderRadius.circular(18),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _ModernPalette.surfaceLight,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: _ModernPalette.stroke),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.person_add_alt_1_rounded,
+                                color: _ModernPalette.accentNeon,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Add Friends',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: _ModernPalette.textMain,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -129,17 +176,18 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     },
                     decoration: InputDecoration(
                       hintText: 'Search messages...',
-                      hintStyle: GoogleFonts.poppins(
+                      hintStyle: GoogleFonts.plusJakartaSans(
                         fontSize: 14,
-                        color: Colors.grey,
+                        color: _ModernPalette.textMuted,
                       ),
                       prefixIcon: const Icon(
                         Icons.search_rounded,
-                        color: Colors.grey,
+                        color: _ModernPalette.textMuted,
                       ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.clear_rounded, color: Colors.grey),
+                              icon: const Icon(Icons.clear_rounded,
+                                  color: _ModernPalette.textMuted),
                               onPressed: () {
                                 _searchController.clear();
                                 setState(() {
@@ -149,7 +197,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                             )
                           : null,
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: _ModernPalette.surfaceLight,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(25),
                         borderSide: BorderSide.none,
@@ -159,8 +207,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
                         vertical: 12,
                       ),
                     ),
-                    style: GoogleFonts.poppins(
-                      color: Colors.black,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: _ModernPalette.textMain,
                     ),
                   ),
                 ],
@@ -179,21 +227,21 @@ class _ChatsScreenState extends State<ChatsScreen> {
                   }
 
                   final chats = snapshot.data!;
-                  
+
                   // Sort conversations dynamically in real time by latest message times
                   chats.sort((a, b) {
                     final dynamic timeA = a['lastMessageTime'];
                     final dynamic timeB = b['lastMessageTime'];
-                    
+
                     int msA = 0;
                     int msB = 0;
-                    
+
                     if (timeA is Timestamp) msA = timeA.millisecondsSinceEpoch;
                     if (timeA is int) msA = timeA;
-                    
+
                     if (timeB is Timestamp) msB = timeB.millisecondsSinceEpoch;
                     if (timeB is int) msB = timeB;
-                    
+
                     return msB.compareTo(msA);
                   });
 
@@ -201,9 +249,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     padding: EdgeInsets.zero,
                     itemCount: chats.length,
                     separatorBuilder: (context, index) => const Divider(
-                      height: 1, 
-                      color: Color(0xFFF1F1F1), 
-                      indent: 76
+                      height: 1,
+                      color: _ModernPalette.stroke,
+                      indent: 76,
                     ),
                     itemBuilder: (context, index) {
                       final chat = chats[index];
@@ -230,7 +278,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
             Container(
               width: 48,
               height: 48,
-              decoration: const BoxDecoration(color: Color(0xFFEEEEEE), shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                color: _ModernPalette.surface,
+                shape: BoxShape.circle,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -238,9 +289,17 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(width: 120, height: 12, color: const Color(0xFFEEEEEE)),
+                  Container(
+                    width: 120,
+                    height: 12,
+                    color: _ModernPalette.surface,
+                  ),
                   const SizedBox(height: 8),
-                  Container(width: 200, height: 10, color: const Color(0xFFEEEEEE)),
+                  Container(
+                    width: 200,
+                    height: 10,
+                    color: _ModernPalette.surface,
+                  ),
                 ],
               ),
             ),
@@ -258,30 +317,30 @@ class _ChatsScreenState extends State<ChatsScreen> {
           const Icon(
             Icons.chat_bubble_outline_rounded,
             size: 80,
-            color: Color(0xFF6C63FF),
+            color: _ModernPalette.primary,
           ),
           const SizedBox(height: 16),
           Text(
             'No conversations yet',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 18,
-              color: Colors.grey,
+              color: _ModernPalette.textMuted,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Go to Friends and start a conversation',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
-              color: Colors.grey,
+              color: _ModernPalette.textMuted,
             ),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6C63FF),
-              foregroundColor: Colors.white,
+              backgroundColor: _ModernPalette.primary,
+              foregroundColor: _ModernPalette.textMain,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -290,14 +349,15 @@ class _ChatsScreenState extends State<ChatsScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => SearchUsersScreen(currentUid: widget.user.uid),
+                  builder: (context) =>
+                      SearchUsersScreen(currentUid: widget.user.uid),
                 ),
               );
             },
             icon: const Icon(Icons.group_rounded),
             label: Text(
               'Find Friends',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -307,9 +367,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
 
   Widget _buildChatTile(BuildContext context, Map<String, dynamic> chat) {
     final participants = List<String>.from(chat['participants'] ?? []);
-    final friendUid = participants
-        .firstWhere((uid) => uid != widget.user.uid, orElse: () => '');
-    
+    final friendUid = participants.firstWhere((uid) => uid != widget.user.uid,
+        orElse: () => '');
+
     final originalMessage = (chat['lastMessage'] ?? '').toString();
     final lastMessageLower = originalMessage.toLowerCase();
     final lastMessageTime = chat['lastMessageTime'];
@@ -343,8 +403,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
         final username = friend.username.toLowerCase();
 
         // INTENTIONAL FILTER CHECK: If query doesn't match name AND doesn't match text message, shrink item entirely
-        if (_searchQuery.isNotEmpty && 
-            !username.contains(_searchQuery) && 
+        if (_searchQuery.isNotEmpty &&
+            !username.contains(_searchQuery) &&
             !lastMessageLower.contains(_searchQuery)) {
           return const SizedBox.shrink();
         }
@@ -379,7 +439,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
+              child: SizedBox(
                 height: 72,
                 child: Row(
                   children: [
@@ -395,7 +455,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                           child: friend.profileImage == null
                               ? Text(
                                   friend.initials,
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white,
                                     fontSize: 15,
@@ -408,10 +468,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
                             width: 12,
                             height: 12,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF43E97B),
+                              color: const Color(0xFF10B981),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white,
+                                color: _ModernPalette.background,
                                 width: 2,
                               ),
                             ),
@@ -428,18 +488,18 @@ class _ChatsScreenState extends State<ChatsScreen> {
                             children: [
                               Text(
                                 friend.username,
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.black,
+                                  color: _ModernPalette.textMain,
                                 ),
                               ),
                               Text(
                                 _formatTime(messageDateTime),
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.grey,
+                                  color: _ModernPalette.textMuted,
                                 ),
                               ),
                             ],
@@ -453,10 +513,14 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                   displayMessageText,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: 13,
-                                    fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
-                                    color: isItalic ? Colors.grey : const Color(0xFF6B7280),
+                                    fontStyle: isItalic
+                                        ? FontStyle.italic
+                                        : FontStyle.normal,
+                                    color: isItalic
+                                        ? _ModernPalette.textMuted
+                                        : _ModernPalette.textMuted,
                                   ),
                                 ),
                               ),
@@ -468,12 +532,12 @@ class _ChatsScreenState extends State<ChatsScreen> {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF6C63FF),
+                                    color: _ModernPalette.primary,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
                                     unreadCount.toString(),
-                                    style: GoogleFonts.poppins(
+                                    style: GoogleFonts.plusJakartaSans(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.white,
