@@ -7,34 +7,35 @@ import '../screens/assignments_screen.dart';
 import '../screens/group_chat_screen.dart';
 import '../services/database_service.dart';
 import '../widgets/add_members_bottom_sheet.dart';
-import 'tasks_ui.dart';
+import 'poll_screen.dart';
 import 'quiz_screen.dart';
- 
+import 'tasks_ui.dart';
+
 class GroupDetailsScreen extends StatefulWidget {
   final GroupModel group;
   final AppUser currentUser;
- 
+
   const GroupDetailsScreen({
     super.key,
     required this.group,
     required this.currentUser,
   });
- 
+
   @override
   State<GroupDetailsScreen> createState() => _GroupDetailsScreenState();
 }
- 
+
 class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   final DatabaseService _databaseService = DatabaseService();
- 
+
   Future<List<AppUser>> _loadMembers(List<String> members) {
     return _databaseService.getUsersByIds(members);
   }
- 
+
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
- 
+
   Widget _buildInfoBadge(
     IconData icon,
     String label,
@@ -79,7 +80,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
       ),
     );
   }
- 
+
   Widget _buildActionTile(
     IconData icon,
     String title,
@@ -121,7 +122,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
       ),
     );
   }
- 
+
   Widget _buildMemberAvatar(AppUser member, String role) {
     return Column(
       children: [
@@ -175,7 +176,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
       ],
     );
   }
- 
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<GroupModel?>(
@@ -185,7 +186,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
         final isAdmin = group.adminUid == widget.currentUser.uid;
         final inviteLink = 'studygroup://group/${group.inviteCode}';
         final colorScheme = Theme.of(context).colorScheme;
- 
+
         if (snapshot.connectionState == ConnectionState.waiting &&
             snapshot.data == null) {
           return Scaffold(
@@ -195,7 +196,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
             ),
           );
         }
- 
+
         return Scaffold(
           backgroundColor: const Color(0xFFF8F9FE),
           body: SafeArea(
@@ -368,9 +369,9 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                               ),
                             ),
                           ),
- 
+
                           const SizedBox(height: 18),
- 
+
                           // ── Action Tiles ──
                           Row(
                             children: [
@@ -453,28 +454,43 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                           Row(
                             children: [
                               _buildActionTile(
-  Icons.quiz_rounded,
-  'Quiz',
-  const Color(0xFFFF6584),
-  () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => GroupQuizListScreen(
-          group: group,
-          currentUser: widget.currentUser,
-        ),
-      ),
-    );
-  },
-),
+                                Icons.quiz_rounded,
+                                'Quiz',
+                                const Color(0xFFFF6584),
+                                () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => GroupQuizListScreen(
+                                        group: group,
+                                        currentUser: widget.currentUser,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                               const SizedBox(width: 12),
-                              const Expanded(child: SizedBox()),
+                              _buildActionTile(
+                                Icons.poll_rounded,
+                                'Poll',
+                                const Color(0xFF4C86FF),
+                                () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => GroupPollListScreen(
+                                        group: group,
+                                        currentUser: widget.currentUser,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                             ],
                           ),
- 
+
                           const SizedBox(height: 22),
- 
+
                           // ── Invite Code ──
                           Container(
                             padding: const EdgeInsets.all(20),
@@ -560,9 +576,9 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                               ],
                             ),
                           ),
- 
+
                           const SizedBox(height: 22),
- 
+
                           // ── Members ──
                           Row(
                             children: [
@@ -627,9 +643,9 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                               );
                             },
                           ),
- 
+
                           const SizedBox(height: 24),
- 
+
                           // ── Open Chat Button ──
                           SizedBox(
                             width: double.infinity,
@@ -664,7 +680,7 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                               ),
                             ),
                           ),
- 
+
                           // ── Admin: Add Members ──
                           if (isAdmin) ...[
                             const SizedBox(height: 18),
